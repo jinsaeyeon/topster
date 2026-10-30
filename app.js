@@ -88,19 +88,22 @@ const COMP=/various|compilation|best\s?of|hits|모음|ヒット|オムニバス|
 function pick(list,artist,track){
   const ourLive=LIVE.test(track);
   let best=null,bs=-1;
-  for(const r of list){
-    const t=titleMatch(track,r.title); if(!t) continue;
+  list.forEach((r,idx)=>{
+    let t=titleMatch(track,r.title);
+    // 한글 제목 ↔ 로마자 제목(위잉위잉 ↔ Wi Ing Wi Ing): 검색 1순위이고 아티스트가 같으면 받아요
+    if(!t&&idx===0&&scriptOf(track)!==scriptOf(r.title||'')&&artistMatch(artist,r.artist)) t=1;
+    if(!t) return;
     const am=artistMatch(artist,r.artist);
     // 한글 이름 ↔ 영문 이름처럼 표기만 다를 때는 제목이 정확히 같으면 받아요
-    if(!am&&!(t===2&&scriptOf(artist)!==scriptOf(r.artist||''))) continue;
-    if((ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) continue;
+    if(!am&&!(t===2&&scriptOf(artist)!==scriptOf(r.artist||''))) return;
+    if((ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) return;
     let s=t*3+(am?2:0);
     if(!ourLive&&LIVE.test(r.album||'')) s-=4;
     if(r.albumArtist&&artistMatch(artist,r.albumArtist)) s+=2;
     if(COMP.test(r.album||'')||COMP.test(r.albumArtist||'')) s-=3;
     if(K(r.title)===K(track)) s+=1;
     if(s>bs){bs=s;best=r}
-  }
+  });
   return best;
 }
 async function deezer(q){
@@ -113,7 +116,7 @@ async function itunes(q,cc){
   const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country='+cc+'&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v5'; try{['v1','v2','v3','v4'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
+const CACHE_KEY='topster-cache-v6'; try{['v1','v2','v3','v4','v5'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 async function lookup(artist,track){
@@ -126,6 +129,7 @@ async function lookup(artist,track){
     ...(jp?[()=>itunes(artist+' '+t,'JP')]:[]),
     ()=>deezer(`artist:"${artist}" track:"${t}"`),
     ()=>deezer(artist+' '+t),
+    ()=>deezer(t),
     ...(jp?[]:[()=>itunes(artist+' '+t,ko?'KR':'US')]),
     ()=>itunes(artist+' '+t,jp?'US':ko?'JP':'KR'),
   ];
