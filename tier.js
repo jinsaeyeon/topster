@@ -13,16 +13,19 @@ function itemHTML(a,i){
 }
 
 /* ---------- 만들기 (끌어서 놓기) ---------- */
+const KIND={music:'곡 기준',cover:'커버 기준'};
 function create(root,albums,{title='앨범 티어표'}={}){
-  root.classList.add('tmk');
+  root.classList.add('tmk'); let kind='music';
   function reset(){
-    root.innerHTML=`<div class="tier"><h2 class="tier-title" contenteditable="true" spellcheck="false">${esc(title)}</h2>
+    root.innerHTML=`<div class="seg kind-seg" role="group" aria-label="기준">${Object.entries(KIND).map(([k,v])=>`<button type="button" data-k="${k}" aria-pressed="${k===kind}">${v}</button>`).join('')}</div><div class="tier"><h2 class="tier-title" contenteditable="true" spellcheck="false">${esc(title)}</h2>
       ${TIERS.map(([t,c],r)=>`<div class="tier-row"><div class="tier-label" contenteditable="true" spellcheck="false" style="background:${c}" data-c="${c}">${t}</div><div class="tier-drop" data-row="${r}"></div></div>`).join('')}</div>
       <div class="tier-pool">${albums.map(itemHTML).join('')}</div>`;
   }
   reset();
+  root.addEventListener('click',e=>{const b=e.target.closest('.kind-seg button'); if(!b) return; kind=b.dataset.k;
+    root.querySelectorAll('.kind-seg button').forEach(x=>x.setAttribute('aria-pressed',x===b)); root.classList.toggle('kind-cover',kind==='cover')});
   return {albums,reset,
-    data(){ return {title:root.querySelector('.tier-title').textContent.trim().slice(0,40)||'앨범 티어표',
+    data(){ return {kind,title:root.querySelector('.tier-title').textContent.trim().slice(0,40)||'앨범 티어표',
       tiers:[...root.querySelectorAll('.tier-row')].map(r=>({l:r.querySelector('.tier-label').textContent.trim().slice(0,20),c:r.querySelector('.tier-label').dataset.c,i:[...r.querySelectorAll('.titem')].map(x=>+x.dataset.id)}))} },
     placed(){ return root.querySelectorAll('.tier-drop .titem').length },
     saveImage(){ return saveImage(this.data(),albums) }};
@@ -81,6 +84,7 @@ async function saveImage(d,albums){
   const cv=document.createElement('canvas'); cv.width=W*S; cv.height=H*S; const x=cv.getContext('2d'); x.scale(S,S);
   x.fillStyle='#111014'; x.fillRect(0,0,W,H);
   x.fillStyle='#f4f2ee'; x.font='900 28px "Noto Sans KR",sans-serif'; x.textBaseline='top'; x.fillText(d.title,pad,pad+4);
+  const tw=x.measureText(d.title).width; x.font='700 15px "Noto Sans KR",sans-serif'; x.fillStyle=d.kind==='cover'?'#7fd4ff':'#ffbf7f'; x.fillText(KIND[d.kind]||'',pad+tw+14,pad+14);
   const imgs=await Promise.all(albums.map(a=>safeCover(a.c)?loadImg(a.c):null));
   rows.forEach((r,ri)=>{ const y=pad+titleH+ri*cell;
     x.fillStyle='#1c1b20'; x.fillRect(pad,y,lab+perRow*cell,cell-2);
@@ -98,7 +102,7 @@ async function saveImage(d,albums){
   const a=document.createElement('a'); a.href=url; a.download='album-tier.png'; a.click();
 }
 
-window.TierMaker={create,renderStatic,safeColor};
+window.TierMaker={create,renderStatic,safeColor,KIND};
 
 /* ---------- 내 티어표 탭 ---------- */
 let mine=null;

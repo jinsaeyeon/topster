@@ -10,6 +10,7 @@ const safeLink=u=>typeof u==='string'&&/^https:\/\/((www|m|music)\.youtube\.com|
 const PERIOD={'6':'최근 6개월','12':'1년','0':'전체'};
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 const TM=()=>window.TierMaker;
+const kindBadge=k=>k==='cover'?'<span class="kind kind-cover">커버 기준</span>':k==='music'?'<span class="kind">곡 기준</span>':'';
 
 async function api(path,opt={}){
   const r=await fetch(SB+'/rest/v1/'+path,{...opt,headers:{...H,...(opt.headers||{})}});
@@ -17,7 +18,7 @@ async function api(path,opt={}){
   if(!r.ok) throw Object.assign(new Error((d&&d.message)||r.status),{data:d});
   return d;
 }
-const PCOLS='id,created_at,nickname,title,period,size,albums', TCOLS='id,created_at,post_id,nickname,title,tiers,albums';
+const PCOLS='id,created_at,nickname,title,period,size,albums', TCOLS='id,created_at,post_id,nickname,title,kind,tiers,albums';
 
 /* ---------- 게시판 목록 (탑스터 / 티어표) ---------- */
 const feeds={
@@ -47,7 +48,7 @@ function renderFeed(){
   $('feedEmpty').hidden=f.items.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':f.empty;
   $('feed').className='feed'+(tab==='tiers'?' feed-tiers':'');
   $('feed').innerHTML=f.items.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
-    <span class="card-t">${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}</span></button>`).join('');
+    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}</span></button>`).join('');
   $('feedMore').hidden=!f.more||!f.loaded;
 }
 document.querySelectorAll('#feedTabs button').forEach(b=>b.addEventListener('click',()=>{
@@ -84,12 +85,12 @@ async function loadComments(p){
   let list=[]; try{ list=await api(`tierlists?select=${TCOLS}&post_id=eq.${p.id}&order=created_at.desc&limit=50`) }catch(_){ if(cur===p) $('cList').innerHTML='<p class="hint">티어표를 불러오지 못했어요.</p>'; return }
   if(cur!==p) return;
   $('cCount').textContent=list.length?list.length+'개':'';
-  $('cList').innerHTML=list.length?list.map((t,i)=>`<article class="comment"><div class="comment-h"><b>${esc(t.nickname)}</b><span class="hint">${esc(t.title)} · ${fmtDate(t.created_at)}</span><button type="button" class="link-btn" data-del="${i}">삭제</button></div>${TM().renderStatic({...t,title:'',albums:p.albums})}</article>`).join(''):'<p class="hint">아직 달린 티어표가 없어요.</p>';
+  $('cList').innerHTML=list.length?list.map((t,i)=>`<article class="comment"><div class="comment-h">${kindBadge(t.kind)}<b>${esc(t.nickname)}</b><span class="hint">${esc(t.title)} · ${fmtDate(t.created_at)}</span><button type="button" class="link-btn" data-del="${i}">삭제</button></div>${TM().renderStatic({...t,title:'',albums:p.albums})}</article>`).join(''):'<p class="hint">아직 달린 티어표가 없어요.</p>';
   $('cList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delItem('tier',list[+b.dataset.del]));
 }
 function openTier(t){
   cur=null; maker=null;
-  $('viewBody').innerHTML=`<div class="poster-head"><h2>${esc(t.title)}</h2><span class="poster-meta">${esc(t.nickname)} · ${fmtDate(t.created_at)}</span></div>${TM().renderStatic({...t,title:''})}`;
+  $('viewBody').innerHTML=`<div class="poster-head"><h2>${kindBadge(t.kind)}${esc(t.title)}</h2><span class="poster-meta">${esc(t.nickname)} · ${fmtDate(t.created_at)}</span></div>${TM().renderStatic({...t,title:''})}`;
   $('viewDel').onclick=()=>delItem('tier',t);
   $('viewDlg').showModal();
   try{history.replaceState(null,'','#t='+t.id)}catch(_){}
@@ -142,9 +143,9 @@ $('postForm').addEventListener('submit',async e=>{
     } else {
       const {maker:m,postId}=pending, d=m.data(), albums=cleanAlbums(m.albums);
       const tiers=d.tiers.map(r=>({l:r.l||'?',c:TM().safeColor(r.c),i:r.i}));
-      const id=await api('rpc/create_tier',{method:'POST',body:JSON.stringify({p_post_id:postId,p_nickname:nick,p_title:title,p_tiers:tiers,p_albums:albums,p_password:pw})});
+      const id=await api('rpc/create_tier',{method:'POST',body:JSON.stringify({p_post_id:postId,p_kind:d.kind,p_nickname:nick,p_title:title,p_tiers:tiers,p_albums:albums,p_password:pw})});
       if(postId){ if(cur&&cur.id===postId){ $('cCancel').click(); loadComments(cur) } }
-      else { feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:null,nickname:nick,title,tiers,albums}); showTab('tiers') }
+      else { feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:null,kind:d.kind,nickname:nick,title,tiers,albums}); showTab('tiers') }
     }
     try{localStorage.setItem('topster-nick',nick)}catch(_){}
     $('postDlg').close(); $('pPw').value='';
