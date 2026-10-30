@@ -100,25 +100,33 @@ async function deezer(q){
   return (d&&d.data||[]).map(x=>({title:x.title,artist:x.artist&&x.artist.name,album:x.album&&x.album.title,albumArtist:x.artist&&x.artist.name,cover:x.album&&(x.album.cover_big||x.album.cover_medium),src:'deezer'}));
 }
 let itLast=0;
-async function itunes(q){
+async function itunes(q,cc){
   const wait=Math.max(0,itLast+3200-Date.now()); itLast=Date.now()+wait; if(wait) await new Promise(r=>setTimeout(r,wait));
-  const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country=KR&term='+encodeURIComponent(q));
+  const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country='+cc+'&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v3'; try{localStorage.removeItem('topster-cache-v1');localStorage.removeItem('topster-cache-v2')}catch(_){}
+const CACHE_KEY='topster-cache-v4'; try{['v1','v2','v3'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 async function lookup(artist,track){
   const key=K(artist)+'|'+K(track);
   if(key in cache) return cache[key];
   const t=cleanTrack(track); let hit=null;
-  try{ hit=pick(await deezer(`artist:"${artist}" track:"${t}"`),artist,t) }catch(_){}
-  if(!hit) try{ hit=pick(await deezer(artist+' '+t),artist,t) }catch(_){}
-  if(!hit) try{ hit=pick(await itunes(artist+' '+t),artist,t) }catch(_){}
+  // 일본 곡은 Deezer에 로마자로만 있는 경우가 많아 iTunes 일본 스토어를 먼저 봐요
+  const jp=/[\u3040-\u30ff]/.test(artist+t), ko=/[\uac00-\ud7a3]/.test(artist+t);
+  const steps=[
+    ...(jp?[()=>itunes(artist+' '+t,'JP')]:[]),
+    ()=>deezer(`artist:"${artist}" track:"${t}"`),
+    ()=>deezer(artist+' '+t),
+    ...(jp?[]:[()=>itunes(artist+' '+t,ko?'KR':'US')]),
+    ()=>itunes(artist+' '+t,jp?'US':ko?'JP':'KR'),
+  ];
+  for(const s of steps){ if(hit) break; try{ hit=pick(await s(),artist,t) }catch(_){} }
   const val=hit?{album:hit.album,artist:hit.albumArtist||hit.artist,cover:hit.cover}:null;
   cache[key]=val; saveCache(); return val;
 }
 
+window.__topsterLookup=lookup;
 /* ---------- 집계 ---------- */
 function periodPlays(){
   let use=state.all.filter(p=>!p.dup);
