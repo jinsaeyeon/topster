@@ -130,7 +130,7 @@ async function deezerFind(artist,track){
   for(const s of steps){ try{ const hit=pick(await s(),artist,t); if(hit) return hit }catch(_){} }
   return null;
 }
-async function itunesArtist(artist,tracks){
+async function itunesArtist(artist,tracks,minPlays=0){
   const jp=/[぀-ヿ]/.test(artist+tracks.map(t=>t.track).join('')), ko=/[가-힣]/.test(artist);
   const latin=alias(artist).find(n=>scriptOf(n)==='la'&&n!==artist);
   const tries=jp?[[artist,'JP']]:ko?[[artist,'KR'],[latin||artist,'US']]:[[artist,'US'],[artist,'KR']];
@@ -139,6 +139,12 @@ async function itunesArtist(artist,tracks){
     let any=false;
     for(const t of tracks){ if(t.res) continue; const hit=pick(list,artist,cleanTrack(t.track)); if(hit){t.res=toVal(hit);any=true} }
     if(any||tracks.every(t=>t.res)) break;
+  }
+  // 아티스트 목록에 안 나온 곡 중 많이 들은 곡은 곡 단위로 한 번 더
+  const cc=jp?'JP':ko?'KR':'US';
+  for(const t of tracks.filter(t=>!t.res).sort((a,b)=>b.plays-a.plays).slice(0,4)){
+    if(t.plays<Math.max(3,minPlays)) break;
+    try{ const hit=pick(await itunes(artist+' '+cleanTrack(t.track),cc),artist,cleanTrack(t.track)); if(hit) t.res=toVal(hit) }catch(_){}
   }
 }
 
@@ -209,7 +215,7 @@ async function build(){
   let gi=0;
   for(const g of groups){ if(!alive()) return; if(g.sum<cut()) break; gi++;
     status.textContent=`앨범 찾는 중 · ${g.artist} (${gi})`;
-    await itunesArtist(g.artist,g.tracks); if(!alive()) return;
+    await itunesArtist(g.artist,g.tracks,Math.floor(cut()/3)); if(!alive()) return;
     g.tracks.forEach(t=>{cache[keyOf(t.artist,t.track)]=t.res||null; if(!t.res) t.res=null}); saveCache(); refresh(); }
   if(!alive()) return;
   state.albums=aggregate(tracks); render(false);
