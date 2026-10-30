@@ -270,6 +270,16 @@ $('ytBtn').addEventListener('click',()=>{
   $('ytBtn').textContent=state.ytThumbs?'YouTube 썸네일 빼기':`못 찾은 ${missing}곡 YouTube 썸네일로 채우기`;
   document.dispatchEvent(new Event('topster:done'));
 });
+// 커버 주소가 없어진 경우(검색 결과에는 있지만 이미지가 지워진 앨범) 깨진 그림 대신 이름 칸으로 바꿔요
+document.addEventListener('error',e=>{
+  const im=e.target; if(!im||im.tagName!=='IMG'||!im.closest('.tile,.mres,.titem')) return;
+  const [al,ar]=String(im.getAttribute('alt')||'').split(' — ');
+  const ph=document.createElement('div'); ph.className='ph'; ph.innerHTML=`<b>${esc(al||'')}</b>${esc(ar||'')}`;
+  const host=im.closest('.mres'); if(host) host.dataset.broken='1';
+  im.replaceWith(ph);
+  // 내 탑스터에 들어간 앨범이면 커버를 비워서 저장·게시에도 깨진 주소가 남지 않게
+  const a=state.albums.find(x=>x.cover===im.src); if(a) a.cover=null;
+},true);
 window.__app={state,render,jsonp};
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),

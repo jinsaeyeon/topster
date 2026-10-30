@@ -80,12 +80,12 @@ async function search(q){
   }catch(_){}
   if(my!==seq) return;
   const seen=new Set(); results=out.filter(r=>{const k=r.id||(r.al+'|'+r.ar).toLowerCase(); const k2=(r.al+'|'+r.ar).toLowerCase(); if(!r.al||seen.has(k)||seen.has(k2)) return false; seen.add(k); seen.add(k2); return true}).slice(0,60);
-  $('mResults').innerHTML=results.length?results.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="" loading="lazy">`:'<span class="ph"></span>'}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>';
+  $('mResults').innerHTML=results.length?results.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="${esc(r.al)} — ${esc(r.ar)}" loading="lazy">`:`<div class="ph"><b>${esc(r.al)}</b>${esc(r.ar)}</div>`}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>';
 }
 $('mQuery').addEventListener('input',e=>{ clearTimeout(tmr); const q=e.target.value.trim(); if(!q){$('mResults').innerHTML='';seq++;return} tmr=setTimeout(()=>search(q),650) });
 $('mQuery').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(tmr); const q=e.target.value.trim(); if(q) search(q) } });
 $('mResults').addEventListener('click',e=>{
-  const b=e.target.closest('.mres'); if(!b) return; const r=results[+b.dataset.r];
+  const b=e.target.closest('.mres'); if(!b) return; const r=results[+b.dataset.r]; if(b.dataset.broken) r.c=null;
   const n=state.n*state.n;
   if(state.albums.length>=n){ alert('25칸이 가득 찼어요. 앨범을 하나 빼고 넣어 주세요.'); return }
   if(state.albums.some(a=>a.album===r.al&&a.artist===r.ar)) return;
