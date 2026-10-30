@@ -2,7 +2,7 @@
 <html lang="ko">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="mapboard.css?v=1">
+<link rel="stylesheet" href="mapboard.css?v=2">
 <title>내 플레이리스트 생태계</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,6 +123,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--groove);padding:1
 .svgbox{position:relative}.sample-tag{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;font-size:13px;font-weight:700;color:var(--bg);background:var(--fg);background:color-mix(in srgb,var(--fg) 70%,var(--bg));border-radius:999px;padding:4px 14px;box-shadow:0 2px 8px rgba(0,0,0,.12);pointer-events:none;white-space:nowrap}body:not(.is-sample) .sample-tag{display:none}#stats,.controls,#legend,#map,#note,#panel{transition:opacity .3s}body.is-sample #stats,body.is-sample .controls,body.is-sample #legend,body.is-sample #map,body.is-sample #note,body.is-sample #panel{opacity:.45}.hint b.warn{color:var(--accent)}</style>
 
 <div class="wrap" id="app">
+  <nav class="site-tabs" aria-label="페이지"><a href="map.html" aria-current="page">내 플레이리스트 생태계</a><a href="./">탑스터 만들기</a></nav>
   <header>
     <div>
       <h1>내 플레이리스트 생태계</h1>
@@ -133,7 +134,6 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--groove);padding:1
       <input type="file" id="file" accept=".zip,.json,.html,.htm" multiple hidden>
       <label class="btn ghost" for="fileAdd" tabindex="0" id="addBtn" hidden>다른 계정 기록 추가</label>
       <button type="button" class="btn hl" id="mapPost" hidden>게시판에 올리기</button>
-      <a class="btn ghost top-link" href="./">탑스터 만들기 →</a>
       <input type="file" id="fileAdd" accept=".zip,.json,.html,.htm" multiple hidden>
     </div>
   </header>
@@ -962,5 +962,5 @@ load(samplePlays(),'sample');
 })();
 </script>
 
-<script src="mapboard.js?v=1"></script>
+<script src="mapboard.js?v=2"></script>
 </html>

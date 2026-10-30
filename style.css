@@ -8,6 +8,10 @@
 [hidden]{display:none!important}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans)}
 .app{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+.site-tabs{display:flex;gap:4px;margin:0 0 22px;border-bottom:1px solid var(--line)}
+.site-tabs a{padding:10px 14px 9px;font-size:14px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.site-tabs a:hover{color:var(--fg)}
+.site-tabs a[aria-current=page]{color:var(--fg);border-bottom-color:var(--accent)}
 .app.drop{outline:2px dashed var(--accent);outline-offset:-12px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
 h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0 0 8px}
