@@ -82,12 +82,11 @@ function titleMatch(ours,theirs){
 const ALT=/karaoke|カラオケ|ガイド|노래방|반주|\binst(?:rumental)?\b|off\s?vocal|[(\[]mr[)\]]|\bmr\s?ver|cover(?:ed)?\s?(?:by|ver)|tribute|原曲|オルゴール|music\s?box|lullaby|8.?bit|piano\s?ver|in\s?the\s?style\s?of|made\s?famous/i;
 const COMP=/various|compilation|best\s?of|hits|모음|ヒット|オムニバス|now\s?that/i;
 function pick(list,artist,track){
-  const ourAlt=ALT.test(track);
   let best=null,bs=-1;
   for(const r of list){
     const t=titleMatch(track,r.title); if(!t) continue;
     if(!artistMatch(artist,r.artist)) continue;
-    if(!ourAlt&&(ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) continue;
+    if((ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) continue;
     let s=t*3;
     if(r.albumArtist&&artistMatch(artist,r.albumArtist)) s+=2;
     if(COMP.test(r.album||'')||COMP.test(r.albumArtist||'')) s-=3;
@@ -106,7 +105,7 @@ async function itunes(q){
   const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country=KR&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v2'; try{localStorage.removeItem('topster-cache-v1')}catch(_){}
+const CACHE_KEY='topster-cache-v3'; try{localStorage.removeItem('topster-cache-v1');localStorage.removeItem('topster-cache-v2')}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 async function lookup(artist,track){
@@ -129,8 +128,10 @@ function periodPlays(){
 function trackTable(plays){
   const m=new Map();
   for(const p of plays){ const k=K(p.artist)+'|'+K(p.track); if(!K(p.track)) continue;
-    let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null};m.set(k,e)}
-    e.plays++; if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
+    let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null,names:new Map()};m.set(k,e)}
+    e.plays++; e.names.set(p.track,(e.names.get(p.track)||0)+1); if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
+  // 같은 곡으로 묶인 제목 중 노래방·반주 표시가 없고 가장 많이 나온 제목으로 검색해요
+  for(const e of m.values()){ const names=[...e.names].sort((a,b)=>(ALT.test(a[0])-ALT.test(b[0]))||(b[1]-a[1])); e.track=names[0][0]; delete e.names }
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
 }
 function aggregate(tracks){
