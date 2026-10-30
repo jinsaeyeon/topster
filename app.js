@@ -292,8 +292,6 @@ $('saveBtn').addEventListener('click',saveImage);
 /* ---------- 조작 ---------- */
 document.querySelectorAll('#period button').forEach(b=>b.addEventListener('click',()=>{
   state.months=+b.dataset.m; document.querySelectorAll('#period button').forEach(x=>x.setAttribute('aria-pressed',x===b)); $('detail').hidden=true; if(state.all) build(); }));
-document.querySelectorAll('#size button').forEach(b=>b.addEventListener('click',()=>{
-  state.n=+b.dataset.n; document.querySelectorAll('#size button').forEach(x=>x.setAttribute('aria-pressed',x===b)); render(false); }));
 $('showList').addEventListener('change',e=>{state.showList=e.target.checked;render(false)});
 document.querySelectorAll('.howto-tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.howto-tabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));

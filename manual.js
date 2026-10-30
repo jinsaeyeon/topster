@@ -45,7 +45,7 @@ $('mQuery').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(tm
 $('mResults').addEventListener('click',e=>{
   const b=e.target.closest('.mres'); if(!b) return; const r=results[+b.dataset.r];
   const n=state.n*state.n;
-  if(state.albums.length>=n){ alert(`${state.n}×${state.n} 칸이 가득 찼어요. 앨범을 빼거나 크기를 키워 주세요.`); return }
+  if(state.albums.length>=n){ alert('25칸이 가득 찼어요. 앨범을 하나 빼고 넣어 주세요.'); return }
   if(state.albums.some(a=>a.album===r.al&&a.artist===r.ar)) return;
   state.albums.push(mk(r.al,r.ar,r.c||null)); changed();
   b.classList.add('added'); setTimeout(()=>b.classList.remove('added'),600);
