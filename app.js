@@ -198,6 +198,8 @@ async function build(){
   for(const t of tracks){ if(queue.length>=400||(cov>=total*.85&&queue.length>=60)) break; queue.push(t); cov+=t.plays }
   tracks.forEach(t=>{const c=cache[keyOf(t.artist,t.track)]; t.res=c===undefined||c==='dz'?undefined:c; t.dzMiss=c==='dz'});
   const status=$('status'); $('saveBtn').disabled=true;
+  status.innerHTML='앨범 찾는 중<span class="dots" aria-hidden="true"></span> <span id="stCount"></span>';
+  const setCount=s=>{const c=$('stCount'); if(c) c.textContent=s};
   const refresh=()=>{state.albums=aggregate(tracks);render(true)};
   refresh();
   // 25위 안의 앨범이 더 바뀔 수 없으면 멈춰요
@@ -211,7 +213,7 @@ async function build(){
   async function worker(){ while(i<todo.length&&!stop&&alive()){ const t=todo[i++];
       const hit=await deezerFind(t.artist,t.track); if(!alive()) return;
       if(hit){t.res=toVal(hit);cache[keyOf(t.artist,t.track)]=t.res} else {t.dzMiss=true;cache[keyOf(t.artist,t.track)]='dz'}
-      saveCache(); done++; status.textContent=`앨범 찾는 중 ${done}/${todo.length}`;
+      saveCache(); done++; setCount(`${done}/${todo.length}`);
       if(done%6===0){ refresh(); if(settled(remain())) stop=true } } }
   await Promise.all(Array.from({length:6},worker));
   if(!alive()) return; refresh();
@@ -223,7 +225,7 @@ async function build(){
   const cut=()=>{const a=state.albums; return a.length>=25?a[24].plays:0};
   let gi=0;
   for(const g of groups){ if(!alive()) return; if(g.sum<cut()) break; gi++;
-    status.textContent=`앨범 찾는 중 · ${g.artist} (${gi})`;
+    setCount(`· ${g.artist}`);
     await itunesArtist(g.artist,g.tracks,Math.floor(cut()/3)); if(!alive()) return;
     g.tracks.forEach(t=>{cache[keyOf(t.artist,t.track)]=t.res||null; if(!t.res) t.res=null}); saveCache(); refresh(); }
   if(!alive()) return;

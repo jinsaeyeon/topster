@@ -37,6 +37,10 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin-bottom:16px;font-size:13px;color:var(--muted)}
 .check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .check input{accent-color:var(--accent)}
+.dots{display:inline-block;width:1.4em;text-align:left}
+.dots::after{content:'.';animation:dots 1.2s infinite}
+@keyframes dots{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
+@media (prefers-reduced-motion:reduce){.dots::after{animation:none;content:'...'}}
 .status{font-family:var(--mono);font-size:12px}
 .save{margin-left:auto}
 .poster{background:#111014;color:#f4f2ee;border-radius:14px;padding:22px;overflow:hidden}

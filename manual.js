@@ -38,7 +38,7 @@ const RI='g kk n d tt r m b pp s ss  j jj ch k t p h'.split(' '), RM='a ae ya ya
 const roman=s=>String(s).replace(/[\uac00-\ud7a3]/g,ch=>{const c=ch.charCodeAt(0)-0xac00; return RI[Math.floor(c/588)]+RM[Math.floor(c%588/28)]+RF[c%28]});
 const norm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
 async function search(q){
-  const my=++seq; $('mResults').innerHTML='<p class="hint">찾는 중…</p>';
+  const my=++seq; $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>';
   const words=q.split(/\s+/).filter(Boolean);
   // "씨잼 킁"처럼 아티스트 + 앨범으로 쓴 경우: 앞부분을 아티스트로도 찾아봐요
   const artistQs=[...new Set([q,...(words.length>1?[words.slice(0,-1).join(' '),words[0]]:[])])];
