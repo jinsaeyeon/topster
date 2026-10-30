@@ -134,7 +134,8 @@ async function deezerFind(artist,track){
 async function itunesArtist(artist,tracks,minPlays=0){
   const jp=/[぀-ヿ]/.test(artist+tracks.map(t=>t.track).join('')), ko=/[가-힣]/.test(artist);
   const latin=alias(artist).find(n=>scriptOf(n)==='la'&&n!==artist);
-  const tries=jp?[[artist,'JP']]:ko?[[artist,'KR'],[latin||artist,'US']]:[[artist,'US'],[artist,'KR']];
+  // iTunes 한국 스토어는 검색 결과가 비어 있어서(2026.10 확인) 한국 곡도 미국 스토어에서 찾아요
+  const tries=jp?[[artist,'JP']]:ko&&latin?[[artist,'US'],[latin,'US']]:[[artist,'US']];
   for(const [term,cc] of tries){
     let list=[]; try{ list=await itunes(term,cc,200) }catch(_){ continue }
     let any=false;
@@ -142,7 +143,7 @@ async function itunesArtist(artist,tracks,minPlays=0){
     if(any||tracks.every(t=>t.res)) break;
   }
   // 아티스트 목록에 안 나온 곡 중 많이 들은 곡은 곡 단위로 한 번 더
-  const cc=jp?'JP':ko?'KR':'US';
+  const cc=jp?'JP':'US';
   for(const t of tracks.filter(t=>!t.res).sort((a,b)=>b.plays-a.plays).slice(0,4)){
     if(t.plays<Math.max(3,minPlays)) break;
     try{ const hit=pick(await itunes(artist+' '+cleanTrack(t.track),cc),artist,cleanTrack(t.track)); if(hit) t.res=toVal(hit) }catch(_){}

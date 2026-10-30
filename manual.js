@@ -66,7 +66,8 @@ async function search(q){
       ...artistQs.slice(0,3).map(a=>itunes(`search?entity=musicArtist&limit=2&country=${cc}&term=`+encodeURIComponent(a)))]);
     if(my!==seq) return;
     const ids=[...new Set([...arts.map(l=>l[0]),...arts.flat()].filter(Boolean).map(a=>a.artistId).filter(Boolean))].slice(0,3);
-    const lists=await Promise.all(ids.map(id=>itunes(`lookup?id=${id}&entity=album&limit=200&country=${cc}`)));
+    // 한국 스토어는 검색은 안 되지만 아티스트 앨범 목록은 나와서, 한국에만 있는 앨범도 같이 가져와요
+    const lists=await Promise.all(ids.flatMap((id,k)=>[itunes(`lookup?id=${id}&entity=album&limit=200&country=${cc}`),...(k===0&&cc!=='JP'?[itunes(`lookup?id=${id}&entity=album&limit=200&country=KR`)]:[])]));
     if(my!==seq) return;
     const rest=words.length>1?norm(words[words.length-1]):'', restR=norm(roman(words[words.length-1]||''));
     const hasRest=x=>rest&&(norm(x.al).includes(rest)||norm(x.al).includes(restR));
