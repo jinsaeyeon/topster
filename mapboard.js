@@ -19,6 +19,7 @@ function currentUse(){
     if(ts.length){const end=new Date(Math.max(...ts)), from=new Date(end); from.setMonth(from.getMonth()-state.months); use=use.filter(p=>p.t>=from.getTime())} }
   return use.filter(p=>!p.dup);
 }
+const normKey=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
 function snapshot(){
   const use=currentUse(), N=Math.min(150,+$('artistCount').value||100), m=new Map();
   for(const p of use){ if(!p.artist||!p.track) continue; let a=m.get(p.artist); if(!a){a={n:0,t:new Map()};m.set(p.artist,a)} a.n++; a.t.set(p.track,(a.t.get(p.track)||0)+1) }
@@ -27,7 +28,9 @@ function snapshot(){
     const tr=[...a.t].sort((x,y)=>y[1]-x[1]), keep=tr.slice(0,12).map(([t,n])=>[t.slice(0,100),n]);
     // 나머지 곡은 이름 없이 개수와 재생 수만
     const rest=tr.slice(12); return rest.length?[name.slice(0,60),keep,[rest.length,rest.reduce((s,x)=>s+x[1],0)]]:[name.slice(0,60),keep] });
-  return {v:1,from:ts.length?Math.min(...ts):null,to:ts.length?Math.max(...ts):null,months:state.months,scope:state.scope,artists};
+  // 지도에 칠해진 장르(이웃으로 추정한 것 포함)를 같이 저장해서 미리보기 색이 실제 지도와 같게
+  const g={}; try{ const byKey=new Map([...state.an.A.values()].map(x=>[normKey(x.name),x.genre])); artists.forEach(([n])=>{ const v=byKey.get(normKey(n)); if(v) g[n]=v }) }catch(_){}
+  return {v:1,g,from:ts.length?Math.min(...ts):null,to:ts.length?Math.max(...ts):null,months:state.months,scope:state.scope,artists};
 }
 function toPlays(d){
   const out=[], total=d.artists.reduce((s,[,tr,r])=>s+tr.reduce((x,[,n])=>x+n,0)+(Array.isArray(r)?r[1]:0),0), from=d.from||Date.now(), span=(d.to||from)-from; let i=0;
@@ -80,23 +83,37 @@ async function loadMore(){
   loading=false; renderFeed();
 }
 // 카드 미리보기: 많이 들은 아티스트를 장르 색 원으로 모아 그려요
-function preview(a){
+const genreCache=new Map();
+function genresFor(p){
+  if(p.data&&p.data.g&&Object.keys(p.data.g).length) return p.data.g;
+  return genreCache.get(p.id)||null;
+}
+// 예전에 올린 지도는 장르를 저장하지 않아서, 보는 쪽에서 한 장씩 계산해요
+let lazyBusy=false;
+function computeLazy(){
+  if(lazyBusy) return; const p=items.find(x=>!genresFor(x)&&!(x.data&&x.data._fail)); if(!p) return; lazyBusy=true;
+  setTimeout(()=>{ try{ const an=M.analyze(toPlays(p.data)), byKey=new Map([...an.A.values()].map(x=>[normKey(x.name),x.genre])), g={};
+      p.data.artists.forEach(([n])=>{const v=byKey.get(normKey(n)); if(v) g[n]=v}); genreCache.set(p.id,g) }catch(_){ p.data._fail=1 }
+    lazyBusy=false; const i=items.indexOf(p), card=document.querySelector(`.mcard[data-i="${i}"] .mprev`); if(card) card.outerHTML=preview(p.data.artists,genresFor(p)); computeLazy() },30);
+}
+function preview(a,g){
   try{
     const top=a.slice(0,30).map(([n,tr,r])=>({n,v:(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0)})).filter(x=>x.v>0);
     if(!top.length||!window.d3) return '';
     const max=top[0].v, circles=top.map(x=>({n:x.n,r:4+22*Math.sqrt(x.v/max)}));
     d3.packSiblings(circles); const enc=d3.packEnclose(circles), s=56/enc.r;
-    return `<svg class="mprev" viewBox="-60 -60 120 120" aria-hidden="true">${circles.map((c,k)=>`<circle cx="${((c.x-enc.x)*s).toFixed(1)}" cy="${((c.y-enc.y)*s).toFixed(1)}" r="${(c.r*s*0.94).toFixed(1)}" fill="${M.gcol(M.genreOf(c.n))}" fill-opacity="${k<3?0.95:0.75}"/>`).join('')}</svg>`;
+    return `<svg class="mprev" viewBox="-60 -60 120 120" aria-hidden="true">${circles.map((c,k)=>`<circle cx="${((c.x-enc.x)*s).toFixed(1)}" cy="${((c.y-enc.y)*s).toFixed(1)}" r="${(c.r*s*0.94).toFixed(1)}" fill="${M.gcol((g&&g[c.n])||M.genreOf(c.n))}" fill-opacity="${k<3?0.95:0.75}"/>`).join('')}</svg>`;
   }catch(_){ return '' }
 }
 function renderFeed(){
   $('mapFeedEmpty').hidden=items.length>0; if(!items.length) $('mapFeedEmpty').textContent='아직 올라온 생태계가 없어요.';
   $('mapFeed').innerHTML=items.map((p,i)=>{ const a=(p.data&&Array.isArray(p.data.artists)?p.data.artists:[]);
     const plays=a.reduce((s,[,tr,r])=>s+(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0),0);
-    return `<button type="button" class="mcard" data-i="${i}">${preview(a)}<span class="mcard-t">${esc(p.title)}</span>
+    return `<button type="button" class="mcard" data-i="${i}">${preview(a,genresFor(p))}<span class="mcard-t">${esc(p.title)}</span>
       <span class="mcard-a">${a.slice(0,6).map(x=>esc(x[0])).join(' · ')}</span>
       <span class="mcard-m">${esc(p.nickname)} · ${a.length}팀 · ${plays.toLocaleString()}회 · ${fmtDate(p.created_at)}</span></button>` }).join('');
   $('mapFeedMore').hidden=!more;
+  computeLazy();
 }
 $('mapFeed').addEventListener('click',e=>{const b=e.target.closest('.mcard'); if(b) view(items[+b.dataset.i])});
 $('mapFeedMore').addEventListener('click',loadMore);
