@@ -205,7 +205,7 @@ function render(loading){
     if(!a) return `<div class="tile ${loading?'loading':'empty'}"></div>`;
     const inner=a.cover?`<img src="${esc(a.cover)}" alt="${esc(a.album)} — ${esc(a.artist)}" crossorigin="anonymous" loading="lazy">`:`<div class="ph"><b>${esc(a.album)}</b>${esc(a.artist)}</div>`;
     const tt=topTrack(a);
-    return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" title="${esc(a.album)} — ${esc(a.artist)} · ${a.plays}회 · ▶ ${esc(tt.track)}">${inner}<span class="rank">${i+1}</span></a>`}).join('');
+    return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" aria-label="${esc(a.album)} — ${esc(a.artist)}">${inner}<span class="rank">${i+1}</span><span class="info"><b>${esc(a.album)}</b><span>${esc(a.artist)}</span><em>${a.plays.toLocaleString()}회 재생</em></span></a>`}).join('');
   list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><button type="button" class="li-btn" data-i="${i}"><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></button></li>`).join('');
   $('poster').classList.toggle('nolist',!state.showList);
 }

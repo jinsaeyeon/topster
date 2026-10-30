@@ -33,7 +33,9 @@ function gridHTML(p,{links}){
     const c=safeCover(a.c), u=safeLink(a.u);
     const inner=c?`<img src="${esc(c)}" alt="${esc(a.al)} — ${esc(a.ar)}" loading="lazy">`:`<div class="ph"><b>${esc(a.al)}</b>${esc(a.ar)}</div>`;
     const tip=`${esc(a.al)} — ${esc(a.ar)}${a.t?' · ▶ '+esc(a.t):''}`;
-    return links&&u?`<a class="tile" href="${esc(u)}" target="_blank" rel="noopener" title="${tip}">${inner}<span class="rank">${i+1}</span></a>`:`<div class="tile" title="${tip}">${inner}</div>`}).join('')+'</div>';
+    if(!links) return `<div class="tile">${inner}</div>`;
+    const info=`<span class="info"><b>${esc(a.al)}</b><span>${esc(a.ar)}</span>${a.p>0?`<em>${(a.p|0).toLocaleString()}회 재생</em>`:''}</span>`;
+    return u?`<a class="tile" href="${esc(u)}" target="_blank" rel="noopener" aria-label="${tip}">${inner}<span class="rank">${i+1}</span>${info}</a>`:`<div class="tile" tabindex="0">${inner}${info}</div>`}).join('')+'</div>';
 }
 function renderFeed(){
   $('feedEmpty').hidden=posts.length>0; if(!posts.length) $('feedEmpty').textContent='아직 올라온 탑스터가 없어요.';
