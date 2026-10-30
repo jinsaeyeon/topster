@@ -94,8 +94,7 @@ function pick(list,artist,track){
     if(!t&&idx===0&&scriptOf(track)!==scriptOf(r.title||'')&&artistMatch(artist,r.artist)) t=1;
     if(!t) return;
     const am=artistMatch(artist,r.artist);
-    // 한글 이름 ↔ 영문 이름처럼 표기만 다를 때는 제목이 정확히 같으면 받아요
-    if(!am&&!(t===2&&scriptOf(artist)!==scriptOf(r.artist||''))) return;
+    if(!am) return;
     if((ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) return;
     let s=t*3+(am?2:0);
     if(!ourLive&&LIVE.test(r.album||'')) s-=4;
@@ -116,7 +115,7 @@ async function itunes(q,cc){
   const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country='+cc+'&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v6'; try{['v1','v2','v3','v4','v5'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
+const CACHE_KEY='topster-cache-v7'; try{['v1','v2','v3','v4','v5','v6'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 async function lookup(artist,track){
@@ -129,6 +128,7 @@ async function lookup(artist,track){
     ...(jp?[()=>itunes(artist+' '+t,'JP')]:[]),
     ()=>deezer(`artist:"${artist}" track:"${t}"`),
     ()=>deezer(artist+' '+t),
+    ...alias(artist).filter(n=>n!==artist&&scriptOf(n)!==scriptOf(artist)).slice(0,1).map(n=>()=>deezer(n+' '+t)),
     ()=>deezer(t),
     ...(jp?[]:[()=>itunes(artist+' '+t,ko?'KR':'US')]),
     ()=>itunes(artist+' '+t,jp?'US':ko?'JP':'KR'),
