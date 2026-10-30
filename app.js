@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const C=window.Core;
-const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false};
+const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false,withVideos:false};
 
 /* ---------- 기록 파일 읽기 (음악 지도와 같은 규칙) ---------- */
 const SPOTIFY_FILE=/(StreamingHistory|Streaming_History_Audio|endsong)[^/]*\.json$/i;
@@ -155,9 +155,12 @@ async function itunesArtist(artist,tracks,minPlays=0){
 
 window.__topsterTest={deezerFind,itunesArtist};
 /* ---------- 집계 ---------- */
+// 기본: 공식 음원만 (YouTube Music·Spotify 재생, YouTube의 공식 음원 Topic 채널)
+// 옵션: 시청 기록에서 음악으로 보이는 영상(뮤직비디오 등)도 추가
+const isOfficial=p=>p.src!=='yt'||p.topic;
 function periodPlays(){
-  let use=state.all.filter(p=>!p.dup);
-  if(state.months){ const ts=use.map(p=>p.t).filter(isFinite); if(ts.length){ const end=new Date(Math.max(...ts)), from=new Date(end); from.setMonth(from.getMonth()-state.months); use=use.filter(p=>p.t>=from.getTime()) } }
+  let use=state.all.filter(p=>!p.dup&&(state.withVideos||isOfficial(p)));
+  if(state.months){ const ts=state.all.map(p=>p.t).filter(isFinite); if(ts.length){ const end=new Date(Math.max(...ts)), from=new Date(end); from.setMonth(from.getMonth()-state.months); use=use.filter(p=>p.t>=from.getTime()) } }
   return use;
 }
 // 다른 사람이 연주·커버한 영상(기타 커버, 타브 악보, 노래방, 리액션 등)은 탑스터에서 빼요
@@ -196,7 +199,7 @@ function aggregate(tracks){
 /* ---------- 실행 ---------- */
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
-  document.dispatchEvent(new Event('topster:start')); $('ytBtn').hidden=true;
+  document.dispatchEvent(new Event('topster:start')); $('ytBtn').hidden=true; $('vidBtn').hidden=true;
   const plays=periodPlays(), tracks=trackTable(plays);
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
@@ -273,6 +276,14 @@ $('list').addEventListener('click',e=>{
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
 });
 
+function syncVidBtn(){
+  const b=$('vidBtn'), extra=state.all?state.all.filter(p=>!p.dup&&!isOfficial(p)).length:0;
+  b.hidden=state.mode!=='auto'||(!extra&&!state.withVideos);
+  b.textContent=state.withVideos?'공식 음원만 보기':`시청 기록에서 음원 자동 추가`;
+  b.classList.toggle('hl',!state.withVideos&&state.albums.length<25);
+}
+document.addEventListener('topster:done',()=>{ if(state.mode==='auto') syncVidBtn() });
+$('vidBtn').addEventListener('click',()=>{ if(!state.all||state.mode!=='auto') return; state.withVideos=!state.withVideos; $('detail').hidden=true; build() });
 $('ytBtn').addEventListener('click',()=>{
   if(!state.tracks||state.mode!=='auto') return;
   state.ytThumbs=!state.ytThumbs; state.albums=aggregate(state.tracks); render(false);
