@@ -2,7 +2,7 @@
 <html lang="ko">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="mapboard.css?v=4">
+<link rel="stylesheet" href="mapboard.css?v=5">
 <title>내 플레이리스트 생태계</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -957,10 +957,10 @@ const app=document.getElementById('app');
 app.addEventListener('drop',e=>loadFiles(e.dataTransfer.files));
 ['artistCount','linkCount'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{document.getElementById(id+'Out').value=e.target.value;render()}));
 
-window.__map={get state(){return state},load};
+window.__map={get state(){return state},load,gcol,genreOf:n=>{ const i=glIndex(n), xg=xgOf(n), xbo=xboOf(n), xe=xeOf(n)&&(!xg||xg==='기타'); return G[norm(n)]||(i!=null&&GL.g[i]>=0?GL_GENRES[GL.g[i]]:null)||(xbo.b?'발라드·가요':null)||bgGenre(n)||(xe?'EDM':null)||xg||(xbo.o?'OST':null)||xpOf(n)||AIG[norm(n)]||null }};
 load(samplePlays(),'sample');
 })();
 </script>
 
-<script src="mapboard.js?v=2"></script>
+<script src="mapboard.js?v=3"></script>
 </html>

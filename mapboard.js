@@ -79,11 +79,21 @@ async function loadMore(){
   }catch(_){ $('mapFeedEmpty').textContent='게시판을 불러오지 못했어요.'; $('mapFeedEmpty').hidden=false; loading=false; return }
   loading=false; renderFeed();
 }
+// 카드 미리보기: 많이 들은 아티스트를 장르 색 원으로 모아 그려요
+function preview(a){
+  try{
+    const top=a.slice(0,30).map(([n,tr,r])=>({n,v:(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0)})).filter(x=>x.v>0);
+    if(!top.length||!window.d3) return '';
+    const max=top[0].v, circles=top.map(x=>({n:x.n,r:4+22*Math.sqrt(x.v/max)}));
+    d3.packSiblings(circles); const enc=d3.packEnclose(circles), s=56/enc.r;
+    return `<svg class="mprev" viewBox="-60 -60 120 120" aria-hidden="true">${circles.map((c,k)=>`<circle cx="${((c.x-enc.x)*s).toFixed(1)}" cy="${((c.y-enc.y)*s).toFixed(1)}" r="${(c.r*s*0.94).toFixed(1)}" fill="${M.gcol(M.genreOf(c.n))}" fill-opacity="${k<3?0.95:0.75}"/>`).join('')}</svg>`;
+  }catch(_){ return '' }
+}
 function renderFeed(){
   $('mapFeedEmpty').hidden=items.length>0; if(!items.length) $('mapFeedEmpty').textContent='아직 올라온 생태계가 없어요.';
   $('mapFeed').innerHTML=items.map((p,i)=>{ const a=(p.data&&Array.isArray(p.data.artists)?p.data.artists:[]);
     const plays=a.reduce((s,[,tr,r])=>s+(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0),0);
-    return `<button type="button" class="mcard" data-i="${i}"><span class="mcard-t">${esc(p.title)}</span>
+    return `<button type="button" class="mcard" data-i="${i}">${preview(a)}<span class="mcard-t">${esc(p.title)}</span>
       <span class="mcard-a">${a.slice(0,6).map(x=>esc(x[0])).join(' · ')}</span>
       <span class="mcard-m">${esc(p.nickname)} · ${a.length}팀 · ${plays.toLocaleString()}회 · ${fmtDate(p.created_at)}</span></button>` }).join('');
   $('mapFeedMore').hidden=!more;
