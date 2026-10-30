@@ -32,6 +32,9 @@ const dz=(path,q,extra='')=>A.jsonp(`https://api.deezer.com/${path}?output=jsonp
 const dzAlbum=x=>({id:'dz'+x.id,al:x.title,ar:x.artist&&x.artist.name,c:x.cover_big||x.cover_medium});
 const itCache=new Map();
 const itunes=path=>{ if(!itCache.has(path)) itCache.set(path,A.jsonp('https://itunes.apple.com/'+path).then(d=>d&&d.results||[]).catch(()=>{itCache.delete(path);return []})); return itCache.get(path) };
+// 한글 앨범 이름을 로마자로도 맞춰 봐요 (킁 → keung)
+const RI='g kk n d tt r m b pp s ss  j jj ch k t p h'.split(' '), RM='a ae ya yae eo e yeo ye o wa wae oe yo u wo we wi yu eu ui i'.split(' '), RF=' k k ks n nj nh t l lk lm lb ls lt lp lh m p ps t t ng t t k t p t'.split(' ');
+const roman=s=>String(s).replace(/[\uac00-\ud7a3]/g,ch=>{const c=ch.charCodeAt(0)-0xac00; return RI[Math.floor(c/588)]+RM[Math.floor(c%588/28)]+RF[c%28]});
 const norm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
 async function search(q){
   const my=++seq; $('mResults').innerHTML='<p class="hint">찾는 중…</p>';
@@ -60,18 +63,19 @@ async function search(q){
   const cc=hasKana(q)?'JP':'US';
   try{
     const [albums,...arts]=await Promise.all([itunes(`search?entity=album&limit=24&country=${cc}&term=`+encodeURIComponent(q)),
-      ...artistQs.slice(0,2).map(a=>itunes(`search?entity=musicArtist&limit=2&country=${cc}&term=`+encodeURIComponent(a)))]);
+      ...artistQs.slice(0,3).map(a=>itunes(`search?entity=musicArtist&limit=2&country=${cc}&term=`+encodeURIComponent(a)))]);
     if(my!==seq) return;
-    const ids=[...new Set(arts.flat().map(a=>a.artistId).filter(Boolean))].slice(0,2);
+    const ids=[...new Set([...arts.map(l=>l[0]),...arts.flat()].filter(Boolean).map(a=>a.artistId).filter(Boolean))].slice(0,3);
     const lists=await Promise.all(ids.map(id=>itunes(`lookup?id=${id}&entity=album&limit=200&country=${cc}`)));
     if(my!==seq) return;
-    const rest=words.length>1?norm(words[words.length-1]):'';
+    const rest=words.length>1?norm(words[words.length-1]):'', restR=norm(roman(words[words.length-1]||''));
+    const hasRest=x=>rest&&(norm(x.al).includes(rest)||norm(x.al).includes(restR));
     let byArtist=lists.flat().filter(x=>x.wrapperType==='collection').map(itA);
     // 피처링 싱글보다 본인 앨범을 먼저, 검색어(앨범 이름)와 맞는 걸 맨 앞에
-    const score=x=>(rest&&norm(x.al).includes(rest)?4:0)+(/feat\.|\(with /i.test(x.al)?0:2)+(/ - Single$/.test(x.al)?0:1);
+    const score=x=>(hasRest(x)?4:0)+(/feat\.|\(with /i.test(x.al)?0:2)+(/ - Single$/.test(x.al)?0:1);
     byArtist.sort((a,b)=>score(b)-score(a));
     const itAlbums=albums.map(itA);
-    out=rest?byArtist.filter(x=>norm(x.al).includes(rest)).concat(out,itAlbums,byArtist):out.concat(itAlbums,byArtist);
+    out=rest?byArtist.filter(hasRest).concat(out,itAlbums,byArtist):out.concat(itAlbums,byArtist);
   }catch(_){}
   if(my!==seq) return;
   const seen=new Set(); results=out.filter(r=>{const k=r.id||(r.al+'|'+r.ar).toLowerCase(); const k2=(r.al+'|'+r.ar).toLowerCase(); if(!r.al||seen.has(k)||seen.has(k2)) return false; seen.add(k); seen.add(k2); return true}).slice(0,60);
