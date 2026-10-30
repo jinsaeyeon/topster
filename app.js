@@ -228,7 +228,7 @@ function render(loading){
     const inner=a.cover?`<img src="${esc(a.cover)}" alt="${esc(a.album)} — ${esc(a.artist)}" crossorigin="anonymous" loading="lazy">`:`<div class="ph"><b>${esc(a.album)}</b>${esc(a.artist)}</div>`;
     const tt=topTrack(a);
     return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" aria-label="${esc(a.album)} — ${esc(a.artist)}">${inner}<span class="rank">${i+1}</span><span class="info"><b>${esc(a.album)}</b><span>${esc(a.artist)}</span><em>${a.plays.toLocaleString()}회 재생</em></span></a>`}).join('');
-  list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><button type="button" class="li-btn" data-i="${i}"><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></button></li>`).join('');
+  list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><button type="button" class="li-btn" data-i="${i}"><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></button><span class="cnt">${a.plays.toLocaleString()}</span></li>`).join('');
   $('poster').classList.toggle('nolist',!state.showList);
 }
 $('list').addEventListener('click',e=>{
@@ -265,7 +265,10 @@ async function saveImage(){
     top.forEach((a,i)=>{ if(i>0&&i%n===0) ly+=8;
       x.fillStyle='#77737f'; x.font='600 12px "JetBrains Mono",monospace'; x.fillText(String(i+1),lx,ly+2);
       x.font='500 14px "Noto Sans KR",sans-serif'; let t=a.album+'  — '+a.artist;
-      while(x.measureText(t).width>listW-30&&t.length>4) t=t.slice(0,-2)+'…';
+      const cnt=a.plays.toLocaleString(); x.font='500 12px "JetBrains Mono",monospace'; const cw=x.measureText(cnt).width;
+      x.fillStyle='#9a97a3'; x.textAlign='right'; x.fillText(cnt,lx+listW,ly+2); x.textAlign='left';
+      x.font='500 14px "Noto Sans KR",sans-serif';
+      while(x.measureText(t).width>listW-40-cw&&t.length>4) t=t.slice(0,-2)+'…';
       x.fillStyle='#f4f2ee'; x.fillText(t,lx+28,ly); ly+=lh; }) }
   let url;
   try{ url=cv.toDataURL('image/png') }catch(e){ alert('일부 앨범 커버를 이미지로 저장할 수 없었어요. 화면을 캡처해 주세요.'); return }

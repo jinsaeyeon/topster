@@ -45,7 +45,7 @@ function renderFeed(){
 function openPost(p){
   const n=Math.min(5,Math.max(3,p.size|0)), al=(Array.isArray(p.albums)?p.albums:[]).slice(0,n*n);
   $('viewBody').innerHTML=`<div class="poster"><div class="poster-head"><h2>${esc(p.title)}</h2><span class="poster-meta">${esc(p.nickname)} · ${PERIOD[p.period]||''} · ${fmtDate(p.created_at)}</span></div>
-    <div class="poster-body">${gridHTML(p,{links:true})}<ol class="list">${al.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><span><span class="al">${esc(a.al)}</span> <span class="ar">— ${esc(a.ar)}</span></span></li>`).join('')}</ol></div></div>`;
+    <div class="poster-body">${gridHTML(p,{links:true})}<ol class="list">${al.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><span><span class="al">${esc(a.al)}</span> <span class="ar">— ${esc(a.ar)}</span></span>${a.p>0?`<span class="cnt">${(a.p|0).toLocaleString()}</span>`:''}</li>`).join('')}</ol></div></div>`;
   $('viewDel').onclick=()=>delPost(p);
   $('viewDlg').showModal();
   try{history.replaceState(null,'','#p='+p.id)}catch(_){}
