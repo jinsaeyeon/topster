@@ -329,7 +329,7 @@ async function fixCover(a){
   const c=await findCover(a.album,a.artist); if(!c||!state.albums.includes(a)) return;
   a.cover=c; render(false); document.dispatchEvent(new Event('topster:cover'));
 }
-window.__app={state,render,jsonp,fixCover};
+window.__app={state,render,jsonp,fixCover,build};
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),
   top:k=>state.albums.slice(0,k).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,p:a.plays}}),
