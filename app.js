@@ -180,6 +180,7 @@ function aggregate(tracks){
 /* ---------- 실행 ---------- */
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
+  document.dispatchEvent(new Event('topster:start'));
   const plays=periodPlays(), tracks=trackTable(plays);
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);

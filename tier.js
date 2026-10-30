@@ -103,13 +103,16 @@ window.TierMaker={create,renderStatic,safeColor};
 /* ---------- 내 티어표 탭 ---------- */
 let mine=null;
 function buildMine(){ mine=create($('tierMount'),Topster.top(25)) }
-document.addEventListener('topster:done',()=>{ mine=null; if(!$('tierView').hidden) buildMine() });
-document.querySelectorAll('#viewTabs button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#viewTabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));
-  const tier=b.dataset.v==='tier'; $('tierView').hidden=!tier; $('topsterView').hidden=tier;
-  if(tier){ if(!window.Topster||!Topster.ready()){ $('tierMount').innerHTML='<p class="hint">앨범을 다 찾으면 티어표를 만들 수 있어요.</p>'; mine=null; return }
-    if(!mine) buildMine() }
-}));
+document.addEventListener('topster:done',()=>{ mine=null });
+function show(tier){
+  $('tierView').hidden=!tier; $('topsterView').hidden=tier;
+  if(tier&&!mine) buildMine();
+  $('board').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('tierBtn').addEventListener('click',()=>{ if(window.Topster&&Topster.ready()) show(true) });
+$('tierBack').addEventListener('click',()=>show(false));
+document.addEventListener('topster:start',()=>{ $('tierBtn').hidden=true; $('postBtn').disabled=true; $('postBtn').classList.remove('hl'); if(!$('tierView').hidden){$('tierView').hidden=true;$('topsterView').hidden=false} });
+document.addEventListener('topster:done',()=>{ $('tierBtn').hidden=false; $('postBtn').disabled=false; $('postBtn').classList.add('hl') });
 $('tierReset').addEventListener('click',()=>{ if(mine) mine.reset() });
 $('tierSave').addEventListener('click',()=>{ if(mine) mine.saveImage() });
 $('tierPost').addEventListener('click',()=>{ if(!mine) return; if(!mine.placed()){alert('앨범을 한 개 이상 줄에 놓아 주세요.');return}
