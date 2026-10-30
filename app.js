@@ -167,9 +167,15 @@ function trackTable(plays){
     const u=[...e.urls].sort((a,b)=>b[1]-a[1])[0]; e.url=u?u[0]:null; delete e.urls }
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
 }
+const ytId=u=>{const m=String(u||'').match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/); return m?m[1]:null};
 function aggregate(tracks){
   const m=new Map();
-  for(const t of tracks){ const a=t.res; if(!a) continue;
+  for(const t of tracks){
+    // Deezer·iTunes 둘 다 없는 곡은 내가 본 YouTube 영상 썸네일로 한 칸을 만들어요
+    if(t.res===null){ const id=ytId(t.url); if(!id) continue;
+      const k='yt|'+K(t.artist)+'|'+K(t.track); if(!m.has(k)) m.set(k,{album:t.track,artist:t.artist,cover:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,plays:0,tracks:[],yt:true});
+      const e=m.get(k); e.plays+=t.plays; e.tracks.push(t); continue }
+    const a=t.res; if(!a) continue;
     // 같은 아티스트라도 검색처마다 표기가 달라서(サカナクション / Sakanaction) 내 기록의 아티스트 이름으로 묶어요
     const k=K(t.artist)+'|'+K(albumBase(a.album)); let e=m.get(k);
     if(!e){e={album:albumBase(a.album),artist:t.artist,cover:a.cover,plays:0,tracks:[]};m.set(k,e)}

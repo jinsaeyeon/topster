@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TIERS=[['SS','#ff7f7f'],['S','#ffbf7f'],['A+','#ffdf7f'],['A','#ffff7f'],['B','#bfff7f'],['C','#7fff7f']];
 const safeColor=c=>/^#[0-9a-f]{6}$/i.test(c||'')?c:'#9a97a3';
-const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\//i.test(u)?u:null;
+const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\/|^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/i.test(u)?u:null;
 
 function itemHTML(a,i){
   const c=safeCover(a.c);

@@ -5,7 +5,7 @@ const H={apikey:KEY,'Content-Type':'application/json'};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // 다른 사람이 올린 값은 믿지 않고, 알려진 커버·YouTube 주소만 써요
-const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\//i.test(u)?u:null;
+const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\/|^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/i.test(u)?u:null;
 const safeLink=u=>typeof u==='string'&&/^https:\/\/((www|m|music)\.youtube\.com|youtu\.be)\//i.test(u)?u:null;
 const PERIOD={'6':'최근 6개월','12':'1년','0':'전체'};
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
@@ -157,6 +157,11 @@ $('postForm').addEventListener('submit',async e=>{
 });
 function showTab(k){ const b=document.querySelector(`#feedTabs button[data-f="${k}"]`); if(b) b.click(); if(!$('viewDlg').open) $('feedSec').scrollIntoView({behavior:'smooth'}) }
 
+// 창 바깥(어두운 부분)을 누르면 닫혀요
+['viewDlg','postDlg'].forEach(id=>{ const d=$(id); let downOut=false;
+  const outside=e=>{const r=d.getBoundingClientRect(); return e.target===d&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)};
+  d.addEventListener('pointerdown',e=>{downOut=outside(e)});
+  d.addEventListener('click',e=>{ if(downOut&&outside(e)) d.close(); downOut=false }); });
 window.Board={postTier};
 
 loadMore('posts').then(async()=>{
