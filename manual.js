@@ -30,6 +30,8 @@ const hasKana=s=>/[぀-ヿ]/.test(s), hasHangul=s=>/[가-힣]/.test(s);
 // 앨범 이름이 로마자로만 올라간 경우(킁 → Keung)가 많아서, 앨범·곡·아티스트 검색을 함께 해요
 const dz=(path,q,extra='')=>A.jsonp(`https://api.deezer.com/${path}?output=jsonp${extra}&q=`+encodeURIComponent(q)).then(d=>d&&d.data||[]).catch(()=>[]);
 const dzAlbum=x=>({id:'dz'+x.id,al:x.title,ar:x.artist&&x.artist.name,c:x.cover_big||x.cover_medium});
+const itCache=new Map();
+const itunes=path=>{ if(!itCache.has(path)) itCache.set(path,A.jsonp('https://itunes.apple.com/'+path).then(d=>d&&d.results||[]).catch(()=>{itCache.delete(path);return []})); return itCache.get(path) };
 const norm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
 async function search(q){
   const my=++seq; $('mResults').innerHTML='<p class="hint">찾는 중…</p>';
@@ -53,14 +55,29 @@ async function search(q){
     if(rest){ const hit=byArtist.filter(x=>norm(x.al).includes(rest)); byArtist=hit.concat(byArtist.filter(x=>!hit.includes(x))) }
     out=out.concat(byArtist);
   }
-  if(out.length<4) try{ const cc=hasKana(q)?'JP':'US';
-    const d=await A.jsonp(`https://itunes.apple.com/search?entity=album&limit=24&country=${cc}&term=`+encodeURIComponent(q));
-    out=out.concat((d&&d.results||[]).map(x=>({al:x.collectionName,ar:x.artistName,c:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.')}))) }catch(_){}
+  // iTunes: 아티스트를 찾아 그 아티스트의 앨범 전체를 가져와요 (Deezer에 없는 한국 앨범이 여기 있는 경우가 많아요: 킁, 12 …)
+  const itA=x=>({al:x.collectionName,ar:x.artistName,c:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.')});
+  const cc=hasKana(q)?'JP':'US';
+  try{
+    const [albums,...arts]=await Promise.all([itunes(`search?entity=album&limit=24&country=${cc}&term=`+encodeURIComponent(q)),
+      ...artistQs.slice(0,2).map(a=>itunes(`search?entity=musicArtist&limit=2&country=${cc}&term=`+encodeURIComponent(a)))]);
+    if(my!==seq) return;
+    const ids=[...new Set(arts.flat().map(a=>a.artistId).filter(Boolean))].slice(0,2);
+    const lists=await Promise.all(ids.map(id=>itunes(`lookup?id=${id}&entity=album&limit=200&country=${cc}`)));
+    if(my!==seq) return;
+    const rest=words.length>1?norm(words[words.length-1]):'';
+    let byArtist=lists.flat().filter(x=>x.wrapperType==='collection').map(itA);
+    // 피처링 싱글보다 본인 앨범을 먼저, 검색어(앨범 이름)와 맞는 걸 맨 앞에
+    const score=x=>(rest&&norm(x.al).includes(rest)?4:0)+(/feat\.|\(with /i.test(x.al)?0:2)+(/ - Single$/.test(x.al)?0:1);
+    byArtist.sort((a,b)=>score(b)-score(a));
+    const itAlbums=albums.map(itA);
+    out=rest?byArtist.filter(x=>norm(x.al).includes(rest)).concat(out,itAlbums,byArtist):out.concat(itAlbums,byArtist);
+  }catch(_){}
   if(my!==seq) return;
   const seen=new Set(); results=out.filter(r=>{const k=r.id||(r.al+'|'+r.ar).toLowerCase(); const k2=(r.al+'|'+r.ar).toLowerCase(); if(!r.al||seen.has(k)||seen.has(k2)) return false; seen.add(k); seen.add(k2); return true}).slice(0,60);
   $('mResults').innerHTML=results.length?results.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="" loading="lazy">`:'<span class="ph"></span>'}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>';
 }
-$('mQuery').addEventListener('input',e=>{ clearTimeout(tmr); const q=e.target.value.trim(); if(!q){$('mResults').innerHTML='';seq++;return} tmr=setTimeout(()=>search(q),350) });
+$('mQuery').addEventListener('input',e=>{ clearTimeout(tmr); const q=e.target.value.trim(); if(!q){$('mResults').innerHTML='';seq++;return} tmr=setTimeout(()=>search(q),650) });
 $('mQuery').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(tmr); const q=e.target.value.trim(); if(q) search(q) } });
 $('mResults').addEventListener('click',e=>{
   const b=e.target.closest('.mres'); if(!b) return; const r=results[+b.dataset.r];
