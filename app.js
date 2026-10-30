@@ -167,10 +167,15 @@ function periodPlays(){
 const COVER=/\bcover(?:ed)?\b|커버|\btabs?\b|타브|악보|fingerstyle|핑거\s?스타일|(?:guitar|piano|drum|bass|violin|cello)\s?(?:cover|tab|ver|version|arrangement|solo)|(?:기타|피아노|드럼|베이스|바이올린|첼로|우쿨렐레|칼림바)\s?(?:커버|연주|버전|악보|편곡)|연주\s?(?:영상|버전)|karaoke|노래방|reaction|리액션|lesson|레슨|tutorial|강좌|불러\s?(?:봤|보았|봄)|부르기/i;
 // 1시간 반복·연속 재생·모음 영상도 빼요
 const LOOP=/\d+\s?시간|[\(\[]\s*\d+\s?(?:hours?|hrs?|h)\b[^\)\]]*[\)\]]|\d+\s?hours?\s?(?:loop|version|ver|edition|of|repeat)|(?:one|ten)\s?hours?|\d+hour|[\(\[]\s*loop\s*[\)\]]|loop\s?(?:version|ver)|반복\s?재생|연속\s?재생|무한\s?반복|1시간|playlist|플레이리스트|[\[\(]플리[\]\)]|플리\s?[|:｜]|노래\s?모음|곡\s?모음|모음집|compilation|nonstop|논스톱|작업할\s?때|공부할\s?때|study\s?with/i;
+// YouTube Music에서 재생해도 일반 사용자가 올린 영상(1시간 반복, 커버 등)일 수 있어서 같이 걸러요
+const COVER_STRICT=/\bcover(?:ed)?\b|커버|\btabs?\b|타브|악보|karaoke|노래방/i;
+const skipVideo=p=>{ if(p.topic||p.src==='spotify') return false;
+  if(p.src==='yt') return COVER.test(p.track)||LOOP.test(p.track)||/\bMR\b/.test(p.track);
+  return LOOP.test(p.track)||COVER_STRICT.test(p.track) };
 function trackTable(plays){
   const m=new Map();
   for(const p of plays){ const k=K(p.artist)+'|'+K(p.track); if(!K(p.track)) continue;
-    if(p.src==='yt'&&!p.topic&&(COVER.test(p.track)||LOOP.test(p.track)||/\bMR\b/.test(p.track))) continue;
+    if(skipVideo(p)) continue;
     let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null,names:new Map(),urls:new Map()};m.set(k,e)}
     e.plays++; e.names.set(p.track,(e.names.get(p.track)||0)+1); if(p.url) e.urls.set(p.url,(e.urls.get(p.url)||0)+1); if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
   // 같은 곡으로 묶인 제목 중 노래방·반주 표시가 없고 가장 많이 나온 제목으로 검색해요
