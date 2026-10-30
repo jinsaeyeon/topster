@@ -157,9 +157,12 @@ function periodPlays(){
   if(state.months){ const ts=use.map(p=>p.t).filter(isFinite); if(ts.length){ const end=new Date(Math.max(...ts)), from=new Date(end); from.setMonth(from.getMonth()-state.months); use=use.filter(p=>p.t>=from.getTime()) } }
   return use;
 }
+// 다른 사람이 연주·커버한 영상(기타 커버, 타브 악보, 노래방, 리액션 등)은 탑스터에서 빼요
+const COVER=/\bcover(?:ed)?\b|커버|\btabs?\b|타브|악보|fingerstyle|핑거\s?스타일|(?:guitar|piano|drum|bass|violin|cello)\s?(?:cover|tab|ver|version|arrangement|solo)|(?:기타|피아노|드럼|베이스|바이올린|첼로|우쿨렐레|칼림바)\s?(?:커버|연주|버전|악보|편곡)|연주\s?(?:영상|버전)|karaoke|노래방|\bMR\b|instrumental|reaction|리액션|lesson|레슨|tutorial|강좌|불러\s?(?:봤|보았|봄)|부르기/i;
 function trackTable(plays){
   const m=new Map();
   for(const p of plays){ const k=K(p.artist)+'|'+K(p.track); if(!K(p.track)) continue;
+    if(p.src==='yt'&&!p.topic&&COVER.test(p.track)) continue;
     let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null,names:new Map(),urls:new Map()};m.set(k,e)}
     e.plays++; e.names.set(p.track,(e.names.get(p.track)||0)+1); if(p.url) e.urls.set(p.url,(e.urls.get(p.url)||0)+1); if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
   // 같은 곡으로 묶인 제목 중 노래방·반주 표시가 없고 가장 많이 나온 제목으로 검색해요
