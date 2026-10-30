@@ -7,7 +7,7 @@
 <meta name="description" content="YouTube·YouTube Music·Spotify 기록으로 많이 들은 앨범 5×5 탑스터를 자동으로 만들어요.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <div class="app" id="app">
@@ -58,7 +58,8 @@
       </div>
       <label class="check"><input type="checkbox" id="showList" checked> 앨범 목록</label>
       <span class="status" id="status" aria-live="polite"></span>
-      <button type="button" class="btn primary save" id="saveBtn" disabled>이미지 저장</button>
+      <button type="button" class="btn save" id="postBtn">게시판에 올리기</button>
+      <button type="button" class="btn primary" id="saveBtn" disabled>이미지 저장</button>
     </div>
     <div class="poster" id="poster">
       <div class="poster-head">
@@ -73,9 +74,32 @@
     <p class="note">앨범은 많이 들은 곡을 음악 검색으로 찾아 같은 앨범끼리 합쳐 세요. 칸을 누르면 그 앨범에서 가장 많이 들은 영상이 YouTube에서 열리고, 오른쪽 목록을 누르면 그 앨범에서 들은 곡을 볼 수 있어요.</p>
     <div class="detail" id="detail" hidden></div>
   </section>
+
+  <section class="feed-sec" id="feedSec">
+    <h2 class="feed-h">모두의 탑스터</h2>
+    <p class="hint" id="feedEmpty" hidden></p>
+    <div class="feed" id="feed"></div>
+    <button type="button" class="btn more" id="feedMore" hidden>더 보기</button>
+  </section>
 </div>
+
+<dialog id="postDlg" class="dlg">
+  <form id="postForm">
+    <h3>게시판에 올리기</h3>
+    <label>닉네임<input id="pNick" maxlength="20" required autocomplete="nickname"></label>
+    <label>제목<input id="pTitle" maxlength="40" required></label>
+    <label>비밀번호 <span class="hint">지울 때 필요해요</span><input id="pPw" type="password" minlength="4" maxlength="50" required autocomplete="new-password"></label>
+    <p class="err" id="pErr" hidden></p>
+    <div class="dlg-btns"><button type="button" class="btn" id="postCancel">취소</button><button class="btn primary" id="postSubmit">올리기</button></div>
+  </form>
+</dialog>
+<dialog id="viewDlg" class="dlg dlg-wide">
+  <div id="viewBody"></div>
+  <div class="dlg-btns"><button type="button" class="btn" id="viewDel">삭제</button><button type="button" class="btn primary" id="viewClose">닫기</button></div>
+</dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="core.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="core.js?v=9"></script>
+<script src="app.js?v=9"></script>
+<script src="board.js?v=9"></script>
 </body>
 </html>

@@ -217,6 +217,10 @@ $('list').addEventListener('click',e=>{
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
 });
 
+// 게시판(board.js)에 넘길 지금 탑스터
+window.Topster={ready:()=>!!state.albums.length&&!$('saveBtn').disabled,
+  snapshot:()=>({title:$('posterTitle').textContent.trim()||'나의 탑스터',period:String(state.months),size:state.n,
+    albums:state.albums.slice(0,state.n*state.n).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}})})};
 /* ---------- 이미지 저장 ---------- */
 function loadImg(src){return new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>r(im);im.onerror=()=>r(null);im.src=src})}
 function wrap(ctx,text,max){const out=[];let line='';for(const ch of String(text)){if(ctx.measureText(line+ch).width>max&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out}
