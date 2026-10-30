@@ -277,10 +277,27 @@ document.addEventListener('error',e=>{
   const ph=document.createElement('div'); ph.className='ph'; ph.innerHTML=`<b>${esc(al||'')}</b>${esc(ar||'')}`;
   const host=im.closest('.mres'); if(host) host.dataset.broken='1';
   im.replaceWith(ph);
-  // 내 탑스터에 들어간 앨범이면 커버를 비워서 저장·게시에도 깨진 주소가 남지 않게
-  const a=state.albums.find(x=>x.cover===im.src); if(a) a.cover=null;
+  // 내 탑스터에 들어간 앨범이면 다른 곳에서 같은 앨범 커버를 찾아 바꿔 넣어요
+  const a=state.albums.find(x=>x.cover===im.src); if(a){ a.cover=null; fixCover(a) }
 },true);
-window.__app={state,render,jsonp};
+const imgOK=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>1);i.onerror=()=>r(false);i.src=src;setTimeout(()=>r(false),8000)});
+const coverTried=new Set();
+async function findCover(album,artist){
+  const t=K(albumBase(album)), q=artist+' '+albumBase(album), jp=/[\u3040-\u30ff]/.test(q), cands=[];
+  const sameAl=x=>{const k=K(albumBase(x)); return k&&t&&(k===t||(Math.min(k.length,t.length)>2&&(k.includes(t)||t.includes(k))))};
+  try{ const d=await jsonp(`https://itunes.apple.com/search?entity=album&limit=15&country=${jp?'JP':'US'}&term=`+encodeURIComponent(q));
+    (d&&d.results||[]).filter(x=>sameAl(x.collectionName)&&artistMatch(artist,x.artistName)).forEach(x=>x.artworkUrl100&&cands.push(x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'))) }catch(_){}
+  try{ const d=await jsonp('https://api.deezer.com/search/album?limit=15&output=jsonp&q='+encodeURIComponent(q));
+    (d&&d.data||[]).filter(x=>sameAl(x.title)&&artistMatch(artist,x.artist&&x.artist.name)).forEach(x=>x.cover_big&&cands.push(x.cover_big)) }catch(_){}
+  for(const c of [...new Set(cands)]) if(!coverTried.has(c)){ coverTried.add(c); if(await imgOK(c)) return c }
+  return null;
+}
+async function fixCover(a){
+  const key=K(a.artist)+'|'+K(a.album); if(coverTried.has(key)) return; coverTried.add(key);
+  const c=await findCover(a.album,a.artist); if(!c||!state.albums.includes(a)) return;
+  a.cover=c; render(false); document.dispatchEvent(new Event('topster:cover'));
+}
+window.__app={state,render,jsonp,fixCover};
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),
   top:k=>state.albums.slice(0,k).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,p:a.plays}}),

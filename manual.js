@@ -6,6 +6,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const KEY='topster-manual';
 const ytSearch=(a,t)=>'https://www.youtube.com/results?search_query='+encodeURIComponent(a+' '+t);
 const mk=(album,artist,cover)=>({album,artist,cover,plays:0,tracks:[{artist,track:album,plays:0,url:ytSearch(artist,album)}]});
+document.addEventListener('topster:cover',()=>{ if(state.mode==='manual') persist() });
 function persist(){ try{localStorage.setItem(KEY,JSON.stringify(state.albums.map(a=>({al:a.album,ar:a.artist,c:a.cover||null}))))}catch(_){} }
 function changed(){ A.render(false); persist();
   document.dispatchEvent(new Event(state.albums.length?'topster:done':'topster:start')) }
@@ -89,7 +90,8 @@ $('mResults').addEventListener('click',e=>{
   const n=state.n*state.n;
   if(state.albums.length>=n){ alert('25칸이 가득 찼어요. 앨범을 하나 빼고 넣어 주세요.'); return }
   if(state.albums.some(a=>a.album===r.al&&a.artist===r.ar)) return;
-  state.albums.push(mk(r.al,r.ar,r.c||null)); changed();
+  const added=mk(r.al,r.ar,r.c||null); state.albums.push(added); changed();
+  if(!added.cover) A.fixCover(added).then(()=>persist());
   b.classList.add('added'); setTimeout(()=>b.classList.remove('added'),600);
 });
 
