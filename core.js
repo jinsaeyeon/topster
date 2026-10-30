@@ -118,7 +118,7 @@ function classifyYT(cands,musicPlays){
   for(const c of cands){
     const ch=String(c.channel||'').trim(), title=String(c.title||'');
     let artist=null, track=null, coL=[];
-    if(TOPIC.test(ch)){ out.push({artist:cleanArtist(ch),track:title,t:c.t,src:'yt',topic:true}); continue }
+    if(TOPIC.test(ch)){ out.push({artist:cleanArtist(ch),track:title,t:c.t,src:'yt',topic:true,url:c.url}); continue }
     const mv=MVRE.test(title);
     if(isNonMusCh(ch)) continue;
     if(LYRICVID.test(title)) continue;
@@ -170,7 +170,7 @@ function classifyYT(cands,musicPlays){
     }
     track=cleanT(track);
     if(!artist||!track||/^https?:/.test(track)) continue;
-    const co=[...coL,...featOf(title)]; out.push(co.length?{artist:String(artist).trim(),track,t:c.t,src:'yt',co}:{artist:String(artist).trim(),track,t:c.t,src:'yt'});
+    const co=[...coL,...featOf(title)]; out.push(co.length?{artist:String(artist).trim(),track,t:c.t,src:'yt',co,url:c.url}:{artist:String(artist).trim(),track,t:c.t,src:'yt',url:c.url});
   }
   return out;
 }
@@ -185,8 +185,9 @@ function parseJSON(arr){
     if(!e||!e.subtitles||!e.subtitles[0]) continue;
     const title=cleanTitle(e.title), channel=String(e.subtitles[0].name||''), t=Date.parse(e.time);
     if(!title||/^https?:/.test(title)) continue;
-    if(/music/i.test(e.header||'')) out.push({artist:cleanArtist(channel),track:title,t,src:'music'});
-    else if(isYTCand(title,channel)) cands.push({title,channel,t});
+    const url=e.titleUrl||null;
+    if(/music/i.test(e.header||'')) out.push({artist:cleanArtist(channel),track:title,t,src:'music',url});
+    else if(isYTCand(title,channel)) cands.push({title,channel,t,url});
   }
   return out.concat(classifyYT(cands,out));
 }
@@ -230,7 +231,8 @@ function parseHTML(text){
     if(!isMusic&&!isYTCand(title,channel)) return;
     const parts=c.innerHTML.split(/<br\s*\/?>/i).map(x=>x.replace(/<[^>]+>/g,'').trim()).filter(Boolean);
     const t=parseLooseDate(parts[parts.length-1]||'');
-    if(isMusic) out.push({artist:cleanArtist(channel),track:title,t,src:'music'}); else cands.push({title,channel,t});
+    const url=a[0].getAttribute('href')||null;
+    if(isMusic) out.push({artist:cleanArtist(channel),track:title,t,src:'music',url}); else cands.push({title,channel,t,url});
   });
   return out.concat(classifyYT(cands,out));
 }

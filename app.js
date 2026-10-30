@@ -148,10 +148,12 @@ function periodPlays(){
 function trackTable(plays){
   const m=new Map();
   for(const p of plays){ const k=K(p.artist)+'|'+K(p.track); if(!K(p.track)) continue;
-    let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null,names:new Map()};m.set(k,e)}
-    e.plays++; e.names.set(p.track,(e.names.get(p.track)||0)+1); if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
+    let e=m.get(k); if(!e){e={artist:p.artist,track:p.track,plays:0,spAlbum:null,names:new Map(),urls:new Map()};m.set(k,e)}
+    e.plays++; e.names.set(p.track,(e.names.get(p.track)||0)+1); if(p.url) e.urls.set(p.url,(e.urls.get(p.url)||0)+1); if(p.album&&!e.spAlbum) e.spAlbum=p.album; }
   // 같은 곡으로 묶인 제목 중 노래방·반주 표시가 없고 가장 많이 나온 제목으로 검색해요
-  for(const e of m.values()){ const names=[...e.names].sort((a,b)=>(ALT.test(a[0])-ALT.test(b[0]))||(b[1]-a[1])); e.track=names[0][0]; delete e.names }
+  for(const e of m.values()){ const names=[...e.names].sort((a,b)=>(ALT.test(a[0])-ALT.test(b[0]))||(b[1]-a[1])); e.track=names[0][0]; delete e.names;
+    // 이 곡을 가장 많이 본 영상 링크
+    const u=[...e.urls].sort((a,b)=>b[1]-a[1])[0]; e.url=u?u[0]:null; delete e.urls }
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
 }
 function aggregate(tracks){
@@ -193,21 +195,25 @@ async function build(){
 
 /* ---------- 그리기 ---------- */
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ytSearch=(a,t)=>'https://www.youtube.com/results?search_query='+encodeURIComponent(a+' '+t);
+const trackUrl=t=>t.url||ytSearch(t.artist,t.track);
+const topTrack=a=>[...a.tracks].sort((x,y)=>y.plays-x.plays)[0];
 function render(loading){
   const n=state.n, top=state.albums.slice(0,n*n), grid=$('grid'), list=$('list');
   grid.style.setProperty('--n',n);
   grid.innerHTML=Array.from({length:n*n},(_,i)=>{const a=top[i];
     if(!a) return `<div class="tile ${loading?'loading':'empty'}"></div>`;
     const inner=a.cover?`<img src="${esc(a.cover)}" alt="${esc(a.album)} — ${esc(a.artist)}" crossorigin="anonymous" loading="lazy">`:`<div class="ph"><b>${esc(a.album)}</b>${esc(a.artist)}</div>`;
-    return `<button type="button" class="tile" data-i="${i}" title="${esc(a.album)} — ${esc(a.artist)} · ${a.plays}회">${inner}<span class="rank">${i+1}</span></button>`}).join('');
-  list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><span><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></span></li>`).join('');
+    const tt=topTrack(a);
+    return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" title="${esc(a.album)} — ${esc(a.artist)} · ${a.plays}회 · ▶ ${esc(tt.track)}">${inner}<span class="rank">${i+1}</span></a>`}).join('');
+  list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><button type="button" class="li-btn" data-i="${i}"><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></button></li>`).join('');
   $('poster').classList.toggle('nolist',!state.showList);
 }
-$('grid').addEventListener('click',e=>{
-  const b=e.target.closest('.tile[data-i]'); if(!b) return;
+$('list').addEventListener('click',e=>{
+  const b=e.target.closest('.li-btn'); if(!b) return;
   const a=state.albums[+b.dataset.i], d=$('detail'); if(!a) return;
   d.hidden=false;
-  d.innerHTML=`<h3>${esc(a.album)}</h3><div class="m">${esc(a.artist)} · ${a.plays.toLocaleString()}회 재생</div><ul>${a.tracks.sort((x,y)=>y.plays-x.plays).map(t=>`<li>${esc(t.track)} <span class="hint">${t.plays}회</span></li>`).join('')}</ul>`;
+  d.innerHTML=`<h3>${esc(a.album)}</h3><div class="m">${esc(a.artist)} · ${a.plays.toLocaleString()}회 재생</div><ul>${a.tracks.sort((x,y)=>y.plays-x.plays).map(t=>`<li><a href="${esc(trackUrl(t))}" target="_blank" rel="noopener">${esc(t.track)}</a> <span class="hint">${t.plays}회</span></li>`).join('')}</ul>`;
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
 });
 
