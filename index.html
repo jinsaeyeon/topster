@@ -7,7 +7,7 @@
 <meta name="description" content="YouTube·YouTube Music·Spotify 기록으로 많이 들은 앨범 5×5 탑스터를 자동으로 만들어요.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 <div class="app" id="app">
@@ -45,6 +45,11 @@
   <p class="err" id="err" hidden></p>
 
   <section class="board" id="board" hidden>
+    <div class="seg view-tabs" id="viewTabs" role="group" aria-label="보기">
+      <button type="button" data-v="topster" aria-pressed="true">탑스터</button>
+      <button type="button" data-v="tier" aria-pressed="false">티어표</button>
+    </div>
+    <div id="topsterView">
     <div class="controls">
       <div class="seg" id="period" role="group" aria-label="기간">
         <button type="button" data-m="6" aria-pressed="true">최근 6개월</button>
@@ -73,6 +78,18 @@
     </div>
     <p class="note">앨범은 많이 들은 곡을 음악 검색으로 찾아 같은 앨범끼리 합쳐 세요. 칸을 누르면 그 앨범에서 가장 많이 들은 영상이 YouTube에서 열리고, 오른쪽 목록을 누르면 그 앨범에서 들은 곡을 볼 수 있어요.</p>
     <div class="detail" id="detail" hidden></div>
+    </div>
+    <div id="tierView" hidden>
+      <div class="controls">
+        <button type="button" class="btn save" id="tierReset">처음으로</button>
+        <button type="button" class="btn primary" id="tierSave">이미지 저장</button>
+      </div>
+      <div class="tier" id="tierBoard">
+        <h2 class="tier-title" id="tierTitle" contenteditable="true" spellcheck="false">앨범 티어표</h2>
+        <div id="tierRows"></div>
+      </div>
+      <div class="tier-pool" id="tierPool" data-row="pool"></div>
+    </div>
   </section>
 
   <section class="feed-sec" id="feedSec">
@@ -98,8 +115,9 @@
   <div class="dlg-btns"><button type="button" class="btn" id="viewDel">삭제</button><button type="button" class="btn primary" id="viewClose">닫기</button></div>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="core.js?v=11"></script>
-<script src="app.js?v=11"></script>
-<script src="board.js?v=11"></script>
+<script src="core.js?v=12"></script>
+<script src="app.js?v=12"></script>
+<script src="board.js?v=12"></script>
+<script src="tier.js?v=12"></script>
 </body>
 </html>

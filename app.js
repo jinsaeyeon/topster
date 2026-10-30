@@ -212,6 +212,7 @@ async function build(){
   state.albums=aggregate(tracks); render(false);
   status.textContent=`앨범 ${state.albums.length}개를 찾았어요`;
   $('saveBtn').disabled=false;
+  document.dispatchEvent(new Event('topster:done'));
 }
 
 /* ---------- 그리기 ---------- */
@@ -240,6 +241,7 @@ $('list').addEventListener('click',e=>{
 
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&!$('saveBtn').disabled,
+  top:k=>state.albums.slice(0,k).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,p:a.plays}}),
   snapshot:()=>({title:$('posterTitle').textContent.trim()||'나의 탑스터',period:String(state.months),size:state.n,
     albums:state.albums.slice(0,state.n*state.n).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}})})};
 /* ---------- 이미지 저장 ---------- */
