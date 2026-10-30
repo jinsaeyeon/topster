@@ -115,7 +115,7 @@ async function itunes(q,cc,limit=8){
   const d=await jsonp('https://itunes.apple.com/search?entity=song&limit='+limit+'&country='+cc+'&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v8'; try{['v1','v2','v3','v4','v5','v6','v7'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
+const CACHE_KEY='topster-cache-v9'; try{['v1','v2','v3','v4','v5','v6','v7','v8'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 // Deezer는 빠르니(5초에 50번) 넓게 먼저, iTunes(1분에 20번)는 Deezer에 없는 곡만 아티스트 단위로
@@ -163,8 +163,9 @@ function trackTable(plays){
 function aggregate(tracks){
   const m=new Map();
   for(const t of tracks){ const a=t.res; if(!a) continue;
-    const k=K(a.artist)+'|'+K(albumBase(a.album)); let e=m.get(k);
-    if(!e){e={album:albumBase(a.album),artist:a.artist,cover:a.cover,plays:0,tracks:[]};m.set(k,e)}
+    // 같은 아티스트라도 검색처마다 표기가 달라서(サカナクション / Sakanaction) 내 기록의 아티스트 이름으로 묶어요
+    const k=K(t.artist)+'|'+K(albumBase(a.album)); let e=m.get(k);
+    if(!e){e={album:albumBase(a.album),artist:t.artist,cover:a.cover,plays:0,tracks:[]};m.set(k,e)}
     if(!e.cover&&a.cover) e.cover=a.cover;
     e.plays+=t.plays; e.tracks.push(t); }
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
@@ -188,6 +189,8 @@ async function build(){
   const settled=rest=>{const a=state.albums=aggregate(tracks); return a.length>25&&a[24].plays>=a[25].plays+rest};
 
   // 1단계: Deezer
+  // 일본어 이름 아티스트는 Deezer에 로마자로 올라가 있어 앨범 이름이 달라지니 iTunes 일본 스토어로만 찾아요
+  queue.forEach(t=>{ if(t.res===undefined&&/[\u3040-\u30ff]/.test(t.artist)) t.dzMiss=true });
   const todo=queue.filter(t=>t.res===undefined&&!t.dzMiss);
   let i=0,done=0,stop=false; const remain=()=>todo.slice(i).reduce((s,t)=>s+t.plays,0);
   async function worker(){ while(i<todo.length&&!stop&&alive()){ const t=todo[i++];
