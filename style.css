@@ -140,6 +140,29 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .kind.kind-cover{background:color-mix(in srgb,#7fd4ff 30%,transparent)}
 .poster-head h2 .kind{font-size:12px}
 .origin{margin-top:14px}
+.howto-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.msearch{margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.msearch input{width:100%;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.msearch input:focus{outline:2px solid var(--accent);outline-offset:0}
+.mresults{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px;margin-top:12px;max-height:340px;overflow:auto}
+.mresults:empty{display:none}
+.mres{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0;font-size:12px;line-height:1.3}
+.mres img,.mres .ph{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;background:#26242c;display:block}
+.mres b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mres span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mres:hover img{outline:2px solid var(--accent);outline-offset:2px}
+.mres.added img{outline:3px solid var(--accent);outline-offset:2px}
+.grid.manual .mtile{cursor:grab;touch-action:none;user-select:none}
+.grid.manual .mtile img{pointer-events:none}
+.tile.slot{display:flex;align-items:center;justify-content:center;background:#1c1b20;cursor:default;outline:1px dashed #34313b;outline-offset:-6px}
+.tile.slot .plus{color:#55525d;font-size:26px;font-weight:300}
+.mtile .rm{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(10,9,12,.8);color:#fff;font-size:16px;line-height:1;cursor:pointer;opacity:0;transition:opacity .15s;z-index:3}
+.mtile:hover .rm,.mtile .rm:focus-visible{opacity:1}
+@media (hover:none){.mtile .rm{opacity:1}}
+.mtile.dragging{opacity:.3}
+.mtile.target{outline:3px solid var(--accent);outline-offset:-3px}
+.mghost{position:fixed;z-index:1000;pointer-events:none;opacity:.92;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.mghost .info,.mghost .rm,.mtile .ph~.info{display:none}
 .comments{margin-top:22px}
 #cMaker .titem{width:64px;height:64px}
 #cMaker .tier-row,#cMaker .tier-drop{min-height:64px}

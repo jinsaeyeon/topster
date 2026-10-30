@@ -7,7 +7,7 @@
 <meta name="description" content="YouTube·YouTube Music·Spotify 기록으로 많이 들은 앨범 5×5 탑스터를 자동으로 만들어요.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 <div class="app" id="app">
@@ -21,9 +21,12 @@
   </header>
 
   <section class="howto" id="howto">
-    <div class="seg howto-tabs" role="group" aria-label="쓰는 서비스">
-      <button type="button" data-h="yt" aria-pressed="true">YouTube · YouTube Music</button>
-      <button type="button" data-h="sp" aria-pressed="false">Spotify</button>
+    <div class="howto-top">
+      <div class="seg howto-tabs" role="group" aria-label="쓰는 서비스">
+        <button type="button" data-h="yt" aria-pressed="true">YouTube · YouTube Music</button>
+        <button type="button" data-h="sp" aria-pressed="false">Spotify</button>
+      </div>
+      <button type="button" class="btn" id="manualBtn">직접 만들기</button>
     </div>
     <ol class="steps" data-h="yt">
       <li><span><b>Google 테이크아웃</b>에서 <b>YouTube 및 YouTube Music</b>만 선택하세요.</span>
@@ -63,6 +66,10 @@
       <button type="button" class="btn" id="tierBtn" hidden>티어표 만들기</button>
       <button type="button" class="btn primary" id="saveBtn" disabled>이미지 저장</button>
     </div>
+    <div class="msearch" id="mPanel" hidden>
+      <input type="search" id="mQuery" placeholder="앨범이나 아티스트 검색" autocomplete="off">
+      <div class="mresults" id="mResults"></div>
+    </div>
     <div class="poster" id="poster">
       <div class="poster-head">
         <h2 id="posterTitle" contenteditable="true" spellcheck="false">나의 탑스터</h2>
@@ -73,7 +80,7 @@
         <ol class="list" id="list"></ol>
       </div>
     </div>
-    <p class="note">앨범은 많이 들은 곡을 음악 검색으로 찾아 같은 앨범끼리 합쳐 세요. 칸을 누르면 그 앨범에서 가장 많이 들은 영상이 YouTube에서 열리고, 오른쪽 목록을 누르면 그 앨범에서 들은 곡을 볼 수 있어요.</p>
+    <p class="note" id="autoNote">앨범은 많이 들은 곡을 음악 검색으로 찾아 같은 앨범끼리 합쳐 세요. 칸을 누르면 그 앨범에서 가장 많이 들은 영상이 YouTube에서 열리고, 오른쪽 목록을 누르면 그 앨범에서 들은 곡을 볼 수 있어요.</p>
     <div class="detail" id="detail" hidden></div>
     </div>
     <div id="tierView" hidden>
@@ -111,9 +118,10 @@
   <div class="dlg-btns"><button type="button" class="btn" id="viewDel">삭제</button><button type="button" class="btn primary" id="viewClose">닫기</button></div>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="core.js?v=21"></script>
-<script src="app.js?v=21"></script>
-<script src="board.js?v=21"></script>
-<script src="tier.js?v=21"></script>
+<script src="core.js?v=22"></script>
+<script src="app.js?v=22"></script>
+<script src="board.js?v=22"></script>
+<script src="tier.js?v=22"></script>
+<script src="manual.js?v=22"></script>
 </body>
 </html>
