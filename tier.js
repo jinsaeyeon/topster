@@ -68,7 +68,7 @@ document.addEventListener('pointermove',e=>{
 function endDrag(e){
   if(!drag) return;
   if(drag.moved){ const z=e&&zoneAt(e.clientX,e.clientY,drag.root);
-    if(z&&drag.caret.parentNode===z) z.insertBefore(drag.it,drag.caret);
+    if(z&&drag.caret.parentNode===z){ z.insertBefore(drag.it,drag.caret); drag.root.dispatchEvent(new Event('tierchange')) }
     drag.caret.remove(); drag.ghost.remove(); drag.it.classList.remove('dragging');
     drag.root.querySelectorAll('.over').forEach(z=>z.classList.remove('over')) }
   drag=null;
@@ -106,7 +106,8 @@ window.TierMaker={create,renderStatic,safeColor,KIND};
 
 /* ---------- 내 티어표 탭 ---------- */
 let mine=null;
-function buildMine(){ mine=create($('tierMount'),Topster.top(25)) }
+function buildMine(){ mine=create($('tierMount'),Topster.top(25)); $('tierPost').classList.remove('hl') }
+$('tierMount').addEventListener('tierchange',()=>{ $('tierPost').classList.toggle('hl',!!mine&&mine.placed()>0) });
 document.addEventListener('topster:done',()=>{ mine=null });
 function show(tier){
   $('tierView').hidden=!tier; $('topsterView').hidden=tier;
@@ -117,7 +118,7 @@ $('tierBtn').addEventListener('click',()=>{ if(window.Topster&&Topster.ready()) 
 $('tierBack').addEventListener('click',()=>show(false));
 document.addEventListener('topster:start',()=>{ $('tierBtn').hidden=true; $('postBtn').disabled=true; $('postBtn').classList.remove('hl'); if(!$('tierView').hidden){$('tierView').hidden=true;$('topsterView').hidden=false} });
 document.addEventListener('topster:done',()=>{ $('tierBtn').hidden=false; $('postBtn').disabled=false; $('postBtn').classList.add('hl') });
-$('tierReset').addEventListener('click',()=>{ if(mine) mine.reset() });
+$('tierReset').addEventListener('click',()=>{ if(mine){ mine.reset(); $('tierPost').classList.remove('hl') } });
 $('tierSave').addEventListener('click',()=>{ if(mine) mine.saveImage() });
 $('tierPost').addEventListener('click',()=>{ if(!mine) return; if(!mine.placed()){alert('앨범을 한 개 이상 줄에 놓아 주세요.');return}
   window.Board&&Board.postTier(mine,null) });

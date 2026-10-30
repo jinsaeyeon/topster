@@ -74,7 +74,8 @@ function openPost(p){
   $('viewDel').onclick=()=>delItem('post',p);
   $('cMake').onclick=()=>{ maker=TM().create($('cMaker'),al,{title:p.title+' 티어표'}); $('cMaker').hidden=false; $('cMakerBtns').hidden=false; $('cMake').hidden=true; $('cMaker').scrollIntoView({behavior:'smooth',block:'start'}) };
   $('cCancel').onclick=()=>{ maker=null; $('cMaker').hidden=true; $('cMaker').innerHTML=''; $('cMakerBtns').hidden=true; $('cMake').hidden=false };
-  $('cReset').onclick=()=>maker&&maker.reset();
+  $('cReset').onclick=()=>{ if(maker){ maker.reset(); $('cPost').classList.remove('hl') } };
+  $('cMaker').addEventListener('tierchange',()=>$('cPost').classList.toggle('hl',!!maker&&maker.placed()>0));
   $('cPost').onclick=()=>{ if(!maker) return; if(!maker.placed()){alert('앨범을 한 개 이상 줄에 놓아 주세요.');return} postTier(maker,p.id) };
   if(!$('viewDlg').open) $('viewDlg').showModal();
   $('viewDlg').scrollTop=0;
