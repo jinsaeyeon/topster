@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const C=window.Core;
-const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto'};
+const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false};
 
 /* ---------- 기록 파일 읽기 (음악 지도와 같은 규칙) ---------- */
 const SPOTIFY_FILE=/(StreamingHistory|Streaming_History_Audio|endsong)[^/]*\.json$/i;
@@ -172,7 +172,7 @@ function aggregate(tracks){
   const m=new Map();
   for(const t of tracks){
     // Deezer·iTunes 둘 다 없는 곡은 내가 본 YouTube 영상 썸네일로 한 칸을 만들어요
-    if(t.res===null){ const id=ytId(t.url); if(!id) continue;
+    if(t.res===null){ const id=state.ytThumbs&&ytId(t.url); if(!id) continue;
       const k='yt|'+K(t.artist)+'|'+K(t.track); if(!m.has(k)) m.set(k,{album:t.track,artist:t.artist,cover:`https://i.ytimg.com/vi/${id}/mqdefault.jpg`,plays:0,tracks:[],yt:true});
       const e=m.get(k); e.plays+=t.plays; e.tracks.push(t); continue }
     const a=t.res; if(!a) continue;
@@ -187,7 +187,7 @@ function aggregate(tracks){
 /* ---------- 실행 ---------- */
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
-  document.dispatchEvent(new Event('topster:start'));
+  document.dispatchEvent(new Event('topster:start')); $('ytBtn').hidden=true;
   const plays=periodPlays(), tracks=trackTable(plays);
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
@@ -229,13 +229,18 @@ async function build(){
   state.albums=aggregate(tracks); render(false);
   status.textContent=`앨범 ${state.albums.length}개를 찾았어요`;
   $('saveBtn').disabled=false;
+  state.tracks=tracks;
+  const missing=tracks.filter(t=>t.res===null&&ytId(t.url)).length;
+  $('ytBtn').hidden=!missing; $('ytBtn').textContent=state.ytThumbs?'YouTube 썸네일 빼기':`못 찾은 ${missing}곡 YouTube 썸네일로 채우기`;
   document.dispatchEvent(new Event('topster:done'));
 }
 
 /* ---------- 그리기 ---------- */
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ytSearch=(a,t)=>'https://www.youtube.com/results?search_query='+encodeURIComponent(a+' '+t);
-const trackUrl=t=>t.url||ytSearch(t.artist,t.track);
+// YouTube Music 링크는 프리미엄이 없으면 바로 못 들을 수 있어서 일반 YouTube 영상 주소로 바꿔요
+const toYT=u=>{const id=ytId(u); return id?'https://www.youtube.com/watch?v='+id:u};
+const trackUrl=t=>t.url?toYT(t.url):ytSearch(t.artist,t.track);
 const topTrack=a=>[...a.tracks].sort((x,y)=>y.plays-x.plays)[0];
 function render(loading){
   const n=state.n, top=state.albums.slice(0,n*n), grid=$('grid'), list=$('list'), manual=state.mode==='manual';
@@ -257,6 +262,13 @@ $('list').addEventListener('click',e=>{
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
 });
 
+$('ytBtn').addEventListener('click',()=>{
+  if(!state.tracks||state.mode!=='auto') return;
+  state.ytThumbs=!state.ytThumbs; state.albums=aggregate(state.tracks); render(false);
+  const missing=state.tracks.filter(t=>t.res===null&&ytId(t.url)).length;
+  $('ytBtn').textContent=state.ytThumbs?'YouTube 썸네일 빼기':`못 찾은 ${missing}곡 YouTube 썸네일로 채우기`;
+  document.dispatchEvent(new Event('topster:done'));
+});
 window.__app={state,render,jsonp};
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),

@@ -6,7 +6,8 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // 다른 사람이 올린 값은 믿지 않고, 알려진 커버·YouTube 주소만 써요
 const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\/|^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/i.test(u)?u:null;
-const safeLink=u=>typeof u==='string'&&/^https:\/\/((www|m|music)\.youtube\.com|youtu\.be)\//i.test(u)?u:null;
+const safeLink=u=>{ if(typeof u!=='string'||!/^https:\/\/((www|m|music)\.youtube\.com|youtu\.be)\//i.test(u)) return null;
+  const m=u.match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/); return m?'https://www.youtube.com/watch?v='+m[1]:u.replace('://music.youtube.com','://www.youtube.com') };
 const PERIOD={'6':'최근 6개월','12':'1년','0':'전체'};
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 const TM=()=>window.TierMaker;
