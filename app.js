@@ -273,12 +273,14 @@ $('ytBtn').addEventListener('click',()=>{
 // 커버 주소가 없어진 경우(검색 결과에는 있지만 이미지가 지워진 앨범) 깨진 그림 대신 이름 칸으로 바꿔요
 document.addEventListener('error',e=>{
   const im=e.target; if(!im||im.tagName!=='IMG'||!im.closest('.tile,.mres,.titem')) return;
+  // 한꺼번에 많이 불러오면 일시적으로 실패할 때가 있어서 한 번 더 시도해요
+  if(!im.dataset.retry){ const orig=im.src; im.dataset.retry=orig; setTimeout(()=>{ im.src=orig+(orig.includes('?')?'&':'?')+'r=1' },1200+Math.random()*1500); return }
   const [al,ar]=String(im.getAttribute('alt')||'').split(' — ');
   const ph=document.createElement('div'); ph.className='ph'; ph.innerHTML=`<b>${esc(al||'')}</b>${esc(ar||'')}`;
   const host=im.closest('.mres'); if(host) host.dataset.broken='1';
   im.replaceWith(ph);
   // 내 탑스터에 들어간 앨범이면 다른 곳에서 같은 앨범 커버를 찾아 바꿔 넣어요
-  const a=state.albums.find(x=>x.cover===im.src); if(a){ a.cover=null; fixCover(a) }
+  const a=state.albums.find(x=>x.cover===im.dataset.retry); if(a){ a.cover=null; fixCover(a) }
 },true);
 const imgOK=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>1);i.onerror=()=>r(false);i.src=src;setTimeout(()=>r(false),8000)});
 const coverTried=new Set();
