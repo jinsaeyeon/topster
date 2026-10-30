@@ -312,6 +312,15 @@ document.addEventListener('error',e=>{
   // 내 탑스터에 들어간 앨범이면 다른 곳에서 같은 앨범 커버를 찾아 바꿔 넣어요
   const a=state.albums.find(x=>x.cover===im.dataset.retry); if(a){ a.cover=null; fixCover(a) }
 },true);
+// 이미지는 열리지만 '커버 없음' 기본 그림(밝은 회색 바탕)인 경우도 찾아서 다시 채워요
+const looksBlank=im=>{ try{ const c=document.createElement('canvas'); c.width=c.height=12; const x=c.getContext('2d'); x.drawImage(im,0,0,12,12);
+  const d=x.getImageData(0,0,12,12).data; let sum=0,sat=0,n=0,sq=0; for(let k=0;k<d.length;k+=4){const v=(d[k]+d[k+1]+d[k+2])/3; sum+=v; sq+=v*v; sat+=Math.max(d[k],d[k+1],d[k+2])-Math.min(d[k],d[k+1],d[k+2]); n++}
+  const m=sum/n, sd=Math.sqrt(sq/n-m*m); return m>215&&sat/n<12&&sd<20 }catch(_){ return false } };
+document.addEventListener('load',e=>{
+  const im=e.target; if(!im||im.tagName!=='IMG'||!im.closest('#grid .tile')||im.dataset.checked) return; im.dataset.checked='1';
+  if(!/dzcdn\.net|mzstatic\.com/.test(im.src)||!looksBlank(im)) return;
+  const a=state.albums.find(x=>x.cover===im.src); if(a){ a.cover=null; render(false); fixCover(a) }
+},true);
 const imgOK=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>1);i.onerror=()=>r(false);i.src=src;setTimeout(()=>r(false),8000)});
 const coverTried=new Set();
 async function findCover(album,artist){
