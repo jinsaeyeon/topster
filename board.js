@@ -1,5 +1,19 @@
 (function(){
 'use strict';
+// 비밀번호 입력창: 브라우저 기본 prompt는 글자가 그대로 보여서, 가려지는 입력칸으로 직접 띄워요
+function askPassword(cls){
+  return new Promise(res=>{
+    const d=document.createElement('dialog'); d.className=cls;
+    d.innerHTML='<form method="dialog" class="pw-form"><h3>삭제</h3><label>올릴 때 정한 비밀번호<input type="password" name="pw" autocomplete="current-password" required minlength="1"></label><div class="pw-btns"><button type="button" class="btn ghost pw-cancel">취소</button><button class="btn pw-ok" value="ok">삭제</button></div></form>';
+    document.body.appendChild(d);
+    const inp=d.querySelector('input'); let out=null;
+    d.querySelector('.pw-cancel').onclick=()=>d.close();
+    d.querySelector('form').addEventListener('submit',()=>{ out=inp.value });
+    d.addEventListener('click',e=>{ if(e.target===d){ const r=d.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) d.close() } });
+    d.addEventListener('close',()=>{ d.remove(); res(out||null) });
+    d.showModal(); inp.focus();
+  });
+}
 const SB='https://icaobhgzpkvdcarttwwe.supabase.co', KEY='sb_publishable_MZTFXHTGwB_jeaekeh-cEQ_akSammLu';
 const H={apikey:KEY,'Content-Type':'application/json'};
 const $=id=>document.getElementById(id);
@@ -102,7 +116,7 @@ $('viewDlg').addEventListener('close',()=>{cur=null;maker=null;try{history.repla
 $('viewClose').addEventListener('click',()=>$('viewDlg').close());
 
 async function delItem(kind,it){
-  const pw=prompt('올릴 때 정한 비밀번호를 입력해 주세요'); if(!pw) return;
+  const pw=await askPassword('dlg'); if(!pw) return;
   try{ const ok=await api(kind==='post'?'rpc/delete_post':'rpc/delete_tier',{method:'POST',body:JSON.stringify({p_id:it.id,p_password:pw})});
     if(!ok){alert('비밀번호가 맞지 않아요.');return}
     if(kind==='post'){ feeds.posts.items=feeds.posts.items.filter(x=>x.id!==it.id); $('viewDlg').close() }

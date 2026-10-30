@@ -30,3 +30,8 @@ body.viewing-shared #period,body.viewing-shared #scope,body.viewing-shared #howt
 .site-tabs a{padding:10px 14px 9px;font-size:14px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
 .site-tabs a:hover{color:var(--fg)}
 .site-tabs a[aria-current=page]{color:var(--fg);border-bottom-color:var(--accent)}
+.pw-form{display:grid;gap:12px}
+.pw-form h3{margin:0;font-size:17px}
+.pw-form label{display:grid;gap:6px;font-size:13.5px}
+.pw-form input{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg)}
+.pw-btns{display:flex;justify-content:flex-end;gap:8px}

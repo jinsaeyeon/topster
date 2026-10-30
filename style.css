@@ -205,3 +205,8 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
   .list li{break-inside:avoid}
   .save{margin-left:0}
 }
+.pw-form{display:grid;gap:12px}
+.pw-form h3{margin:0;font-size:17px}
+.pw-form label{display:grid;gap:6px;font-size:13.5px}
+.pw-form input{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg)}
+.pw-btns{display:flex;justify-content:flex-end;gap:8px}
