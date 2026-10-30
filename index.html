@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>내 탑스터</title>
+<meta name="description" content="YouTube·YouTube Music·Spotify 기록으로 많이 들은 앨범 5×5 탑스터를 자동으로 만들어요.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <h1>내 탑스터</h1>
+      <p class="sub">YouTube·YouTube Music·Spotify 기록에서 많이 들은 앨범을 찾아 탑스터로 만들어요. 기록은 이 브라우저 안에서만 읽고, 앨범을 찾을 때 곡 제목과 아티스트 이름만 음악 검색(Deezer·iTunes)에 보내요.</p>
+    </div>
+    <label class="btn primary" for="file" tabindex="0">내 기록 불러오기</label>
+    <input type="file" id="file" accept=".zip,.json,.html" multiple hidden>
+  </header>
+
+  <section class="howto" id="howto">
+    <div class="seg howto-tabs" role="group" aria-label="쓰는 서비스">
+      <button type="button" data-h="yt" aria-pressed="true">YouTube · YouTube Music</button>
+      <button type="button" data-h="sp" aria-pressed="false">Spotify</button>
+    </div>
+    <ol class="steps" data-h="yt">
+      <li><span><b>Google 테이크아웃</b>에서 <b>YouTube 및 YouTube Music</b>만 선택하세요.</span>
+        <span class="hint"><a href="https://takeout.google.com/" target="_blank" rel="noopener">takeout.google.com 열기</a> → '모두 선택 해제' → 목록에서 YouTube 및 YouTube Music만 체크</span></li>
+      <li><span><b>'모든 YouTube 데이터 포함됨'</b> 버튼을 눌러 <b>'모두 선택 해제'</b> 후 <b>시청 기록</b> 하나만 체크하고, <b>.zip</b>으로 내보내세요.</span>
+        <span class="hint">전송 방법은 <b>이메일로 다운로드 링크 보내기</b>를 고르세요. <b class="warn">먼저 Google 보안 알림 메일이 오는데, 메일의 '활동 확인' 버튼을 눌러 본인 인증을 해야</b> 데이터 다운로드 메일이 와요.</span></li>
+      <li><span>받은 <b>zip 파일을 압축 풀지 말고</b> 그대로 넣으세요.</span>
+        <label class="drop-cta" for="file" tabindex="0">zip 파일 선택하기<small>또는 이 페이지 아무 곳에나 끌어다 놓기</small></label></li>
+    </ol>
+    <ol class="steps" data-h="sp" hidden>
+      <li><span>Spotify <b>계정 &gt; 개인정보 보호</b> 페이지에서 <b>데이터 다운로드</b>로 가세요.</span>
+        <span class="hint"><a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">spotify.com 개인정보 보호 열기</a> (PC 브라우저에서 로그인)</span></li>
+      <li><span><b>확장 스트리밍 기록</b> 또는 <b>계정 데이터</b>를 요청하세요.</span>
+        <span class="hint">요청하면 <b>확인 메일이 먼저 오는데, 메일의 버튼을 눌러 요청을 확정해야</b> 준비가 시작돼요.</span></li>
+      <li><span>받은 <b>zip 파일을 압축 풀지 말고</b> 그대로 넣으세요.</span>
+        <label class="drop-cta" for="file" tabindex="0">zip 파일 선택하기<small>또는 이 페이지 아무 곳에나 끌어다 놓기</small></label></li>
+    </ol>
+  </section>
+  <p class="err" id="err" hidden></p>
+
+  <section class="board" id="board" hidden>
+    <div class="controls">
+      <div class="seg" id="period" role="group" aria-label="기간">
+        <button type="button" data-m="6" aria-pressed="true">최근 6개월</button>
+        <button type="button" data-m="12" aria-pressed="false">1년</button>
+        <button type="button" data-m="0" aria-pressed="false">전체</button>
+      </div>
+      <div class="seg" id="size" role="group" aria-label="크기">
+        <button type="button" data-n="3" aria-pressed="false">3×3</button>
+        <button type="button" data-n="4" aria-pressed="false">4×4</button>
+        <button type="button" data-n="5" aria-pressed="true">5×5</button>
+      </div>
+      <label class="check"><input type="checkbox" id="showList" checked> 앨범 목록</label>
+      <span class="status" id="status" aria-live="polite"></span>
+      <button type="button" class="btn primary save" id="saveBtn" disabled>이미지 저장</button>
+    </div>
+    <div class="poster" id="poster">
+      <div class="poster-head">
+        <h2 id="posterTitle" contenteditable="true" spellcheck="false">나의 탑스터</h2>
+        <span class="poster-meta" id="posterMeta"></span>
+      </div>
+      <div class="poster-body">
+        <div class="grid" id="grid"></div>
+        <ol class="list" id="list"></ol>
+      </div>
+    </div>
+    <p class="note">앨범은 많이 들은 곡을 음악 검색으로 찾아 같은 앨범끼리 합쳐 세요. 칸을 누르면 그 앨범에서 들은 곡을 볼 수 있어요.</p>
+    <div class="detail" id="detail" hidden></div>
+  </section>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
