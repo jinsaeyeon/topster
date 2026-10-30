@@ -31,7 +31,7 @@ async function readEntries(files){
   }
   return out;
 }
-async function loadFiles(files){
+async function loadFiles(files,append){
   const err=$('err'); err.hidden=true; if(!files||!files.length) return;
   try{
     const entries=await readEntries([...files]);
@@ -45,11 +45,14 @@ async function loadFiles(files){
       let arr; try{arr=JSON.parse(text)}catch(_){continue}
       if(isSpotifyArr(arr)) plays=plays.concat(parseSpotify(arr)); else if(!yt.length&&Array.isArray(arr)) plays=plays.concat(C.parseJSON(arr));
     }
+    // 다른 계정 기록 추가: 이미 넣은 기록에 합쳐요 (같은 재생은 한 번만)
+    if(append&&state.raw) plays=state.raw.concat(plays);
     { const seen=new Set(); plays=plays.filter(p=>{const k=p.t+'|'+p.artist+'|'+p.track; if(isFinite(p.t)&&seen.has(k)) return false; seen.add(k); return true}); }
     if(plays.length<10){err.textContent='이 파일에서 음악 재생 기록을 찾지 못했어요. Google 테이크아웃의 YouTube 기록 zip이나 Spotify 데이터 zip을 압축 풀지 말고 그대로 넣어 주세요.';err.hidden=false;return}
-    state.all=C.mergeAliases(C.cleanArtists(plays));
+    state.raw=plays;
+    state.all=C.mergeAliases(C.cleanArtists(plays.map(p=>({...p}))));
     state.mode='auto'; document.dispatchEvent(new Event('topster:auto'));
-    $('howto').hidden=true; $('board').hidden=false;
+    $('howto').hidden=true; $('board').hidden=false; $('addRec').hidden=false;
     build();
   }catch(e){console.error(e);err.textContent='파일을 읽지 못했어요. 받은 zip 파일을 그대로 넣어 주세요.';err.hidden=false}
 }
@@ -352,9 +355,11 @@ document.querySelectorAll('.howto-tabs button').forEach(b=>b.addEventListener('c
   document.querySelectorAll('.howto-tabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));
   document.querySelectorAll('.steps[data-h]').forEach(o=>o.hidden=o.dataset.h!==b.dataset.h); }));
 $('file').addEventListener('change',e=>{loadFiles(e.target.files);e.target.value=''});
+$('fileAdd').addEventListener('change',e=>{loadFiles(e.target.files,true);e.target.value=''});
+$('addRec').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('fileAdd').click()}});
 document.querySelectorAll('label[for=file]').forEach(l=>l.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}}));
 const app=$('app');
 ['dragenter','dragover'].forEach(t=>app.addEventListener(t,e=>{e.preventDefault();app.classList.add('drop')}));
 ['dragleave','drop'].forEach(t=>app.addEventListener(t,e=>{e.preventDefault();app.classList.remove('drop')}));
-app.addEventListener('drop',e=>loadFiles(e.dataTransfer.files));
+app.addEventListener('drop',e=>loadFiles(e.dataTransfer.files,state.mode==='auto'&&!!state.raw));
 })();
