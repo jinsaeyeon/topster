@@ -137,7 +137,7 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .tier-static.small .titem .ph,.tier-static.small .titem .info{display:none}
 .kind-seg{margin-bottom:10px}
 .kind{display:inline-block;vertical-align:middle;margin-right:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:color-mix(in srgb,#ffbf7f 30%,transparent);color:var(--fg);white-space:nowrap}
-.kind-cover{background:color-mix(in srgb,#7fd4ff 30%,transparent)}
+.kind.kind-cover{background:color-mix(in srgb,#7fd4ff 30%,transparent)}
 .poster-head h2 .kind{font-size:12px}
 .comments{margin-top:22px}
 #cMaker .titem{width:64px;height:64px}

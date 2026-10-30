@@ -23,7 +23,7 @@ function create(root,albums,{title='앨범 티어표'}={}){
   }
   reset();
   root.addEventListener('click',e=>{const b=e.target.closest('.kind-seg button'); if(!b) return; kind=b.dataset.k;
-    root.querySelectorAll('.kind-seg button').forEach(x=>x.setAttribute('aria-pressed',x===b)); root.classList.toggle('kind-cover',kind==='cover')});
+    root.querySelectorAll('.kind-seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));});
   return {albums,reset,
     data(){ return {kind,title:root.querySelector('.tier-title').textContent.trim().slice(0,40)||'앨범 티어표',
       tiers:[...root.querySelectorAll('.tier-row')].map(r=>({l:r.querySelector('.tier-label').textContent.trim().slice(0,20),c:r.querySelector('.tier-label').dataset.c,i:[...r.querySelectorAll('.titem')].map(x=>+x.dataset.id)}))} },
