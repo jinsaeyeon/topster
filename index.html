@@ -7,7 +7,7 @@
 <meta name="description" content="YouTube·YouTube Music·Spotify 기록으로 많이 들은 앨범 5×5 탑스터를 자동으로 만들어요.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css?v=54">
+<link rel="stylesheet" href="style.css?v=55">
 </head>
 <body>
 <div class="app" id="app">
@@ -26,6 +26,7 @@
       <div class="seg howto-tabs" role="group" aria-label="쓰는 서비스">
         <button type="button" data-h="yt" aria-pressed="true">YouTube · YouTube Music</button>
         <button type="button" data-h="sp" aria-pressed="false">Spotify</button>
+        <button type="button" data-h="pl" aria-pressed="false">YouTube 재생목록</button>
       </div>
       <button type="button" class="btn" id="manualBtn">직접 만들기</button>
     </div>
@@ -45,12 +46,21 @@
       <li><span>받은 <b>zip 파일을 압축 풀지 말고</b> 그대로 넣으세요.</span>
         <label class="drop-cta" for="file" tabindex="0">zip 파일 선택하기<small>여러 개 함께 선택 가능 · 이 페이지에 끌어다 놓아도 돼요</small></label></li>
     </ol>
+    <ol class="steps" data-h="pl" hidden>
+      <li><span><b>Google 테이크아웃</b>에서 <b>YouTube 및 YouTube Music</b>만 선택하세요.</span>
+        <span class="hint"><a href="https://takeout.google.com/" target="_blank" rel="noopener">takeout.google.com 열기</a> → '모두 선택 해제' → 목록에서 YouTube 및 YouTube Music만 체크</span></li>
+      <li><span><b>'모든 YouTube 데이터 포함됨'</b> 버튼을 눌러 <b>'모두 선택 해제'</b> 후 <b>재생목록</b>을 체크하고, <b>.zip</b>으로 내보내세요.</span>
+        <span class="hint">시청 기록도 같이 체크하면 둘 중에서 골라 볼 수 있어요. <b class="warn">먼저 Google 보안 알림 메일이 오는데, 메일의 '활동 확인' 버튼을 눌러 본인 인증을 해야</b> 데이터 다운로드 메일이 와요.</span></li>
+      <li><span>받은 <b>zip 파일을 압축 풀지 말고</b> 그대로 넣으세요.</span>
+        <label class="drop-cta" for="file" tabindex="0">zip 파일 선택하기<small>여러 개 함께 선택 가능 · 이 페이지에 끌어다 놓아도 돼요</small></label></li>
+    </ol>
   </section>
   <p class="err" id="err" hidden></p>
 
   <section class="board" id="board" hidden>
     <div id="topsterView">
     <div class="controls">
+      <select id="srcSel" class="src-sel" aria-label="기록" hidden></select>
       <div class="seg" id="period" role="group" aria-label="기간">
         <button type="button" data-m="6" aria-pressed="true">최근 6개월</button>
         <button type="button" data-m="12" aria-pressed="false">1년</button>
@@ -116,10 +126,10 @@
   <div class="dlg-btns"><button type="button" class="btn" id="viewDel">삭제</button><button type="button" class="btn primary" id="viewClose">닫기</button></div>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="core.js?v=54"></script>
-<script src="app.js?v=54"></script>
-<script src="board.js?v=54"></script>
-<script src="tier.js?v=54"></script>
-<script src="manual.js?v=54"></script>
+<script src="core.js?v=55"></script>
+<script src="app.js?v=55"></script>
+<script src="board.js?v=55"></script>
+<script src="tier.js?v=55"></script>
+<script src="manual.js?v=55"></script>
 </body>
 </html>

@@ -9,6 +9,16 @@ const SPOTIFY_FILE=/(StreamingHistory|Streaming_History_Audio|endsong)[^/]*\.jso
 const YT_WATCH=/(시청 기록|watch-history|視聴履歴)\.(json|html)$/i;
 const YT_ACT=/(?:내\s?활동|my\s?activity|マイ\s?アクティビティ)\/youtube[^\/]*\/[^\/]+\.(json|html)$/i;
 const isYTFile=n=>YT_WATCH.test(n)||YT_ACT.test(n);
+// 테이크아웃의 재생목록 CSV (재생목록/○○-동영상.csv, playlists/○○-videos.csv 등)
+const PL_FILE=/(?:재생목록|playlists|再生リスト)\/[^\/]+\.csv$/i;
+const PL_INDEX=/(?:재생목록|playlists|再生リスト)\/(?:재생목록|playlists|再生リスト)\.csv$/i;
+function parsePlaylistCSV(name,text){
+  const base=name.split('/').pop().replace(/\.csv$/i,'').replace(/[-_ ]?(?:동영상|videos|動画)$/i,'').trim();
+  const items=[];
+  for(const line of text.split(/\r?\n/)){ const cols=line.split(','); const id=(cols[0]||'').trim();
+    if(/^[\w-]{11}$/.test(id)){ const t=Date.parse((cols[1]||'').trim()); items.push({id,t:isFinite(t)?t:null}) } }
+  return items.length?{name:base||'재생목록',items}:null;
+}
 function isSpotifyArr(arr){const e=Array.isArray(arr)&&arr.find(x=>x&&typeof x==='object'); return !!e&&('master_metadata_track_name' in e||'trackName' in e||'msPlayed' in e||'ms_played' in e)}
 function parseSpotify(arr){
   const out=[];
@@ -26,7 +36,7 @@ async function readEntries(files){
     if(/\.zip$/i.test(f.name)){
       const zip=await JSZip.loadAsync(f);
       for(const z of Object.values(zip.files)){ if(z.dir) continue; const n=z.name.normalize('NFC');
-        if(SPOTIFY_FILE.test(n)||isYTFile(n)) out.push([n,await z.async('string'),f.name]); }
+        if(SPOTIFY_FILE.test(n)||isYTFile(n)||(PL_FILE.test(n)&&!PL_INDEX.test(n))) out.push([n,await z.async('string'),f.name]); }
     } else out.push([f.name,await f.text(),f.name]);
   }
   return out;
@@ -40,7 +50,8 @@ async function loadFiles(files,append){
     ytAll.forEach(e=>{const k=e[2]+'|'+(YT_ACT.test(e[0])?'act':'watch'); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(e)});
     const yt=[...groups.values()].map(g=>g.sort((x,y)=>(/\.json$/i.test(y[0])?1:0)-(/\.json$/i.test(x[0])?1:0))[0]);
     for(const [n,text] of yt) plays=plays.concat(/\.json$/i.test(n)?C.parseJSON(JSON.parse(text)):C.parseHTML(text));
-    for(const e of entries){ const [n,text]=e; if(ytAll.includes(e)) continue;
+    const pls=entries.filter(([n])=>PL_FILE.test(n)).map(([n,text])=>parsePlaylistCSV(n,text)).filter(Boolean);
+    for(const e of entries){ const [n,text]=e; if(ytAll.includes(e)||PL_FILE.test(n)) continue;
       if(!/\.json$/i.test(n)&&!/^\s*\[/.test(text)){ if(!yt.length&&/<html|outer-cell/i.test(text)) plays=plays.concat(C.parseHTML(text)); continue }
       let arr; try{arr=JSON.parse(text)}catch(_){continue}
       if(isSpotifyArr(arr)) plays=plays.concat(parseSpotify(arr)); else if(!yt.length&&Array.isArray(arr)) plays=plays.concat(C.parseJSON(arr));
@@ -48,11 +59,18 @@ async function loadFiles(files,append){
     // 다른 계정 기록 추가: 이미 넣은 기록에 합쳐요 (같은 재생은 한 번만)
     if(append&&state.raw) plays=state.raw.concat(plays);
     { const seen=new Set(); plays=plays.filter(p=>{const k=p.t+'|'+p.artist+'|'+p.track; if(isFinite(p.t)&&seen.has(k)) return false; seen.add(k); return true}); }
+    if(pls.length){ state.playlists=append&&state.playlists?state.playlists.concat(pls):pls; state.plPlays=null }
+    if(plays.length<10&&pls.length){ // 재생목록만 들어 있는 zip
+      state.raw=[]; state.all=[]; state.removed=new Set(); state.mode='auto'; state.src='pl:*';
+      document.dispatchEvent(new Event('topster:auto'));
+      $('howto').hidden=true; $('board').hidden=false; $('addRec').hidden=false; syncSrc(); build(); return }
     if(plays.length<10){err.textContent='이 파일에서 음악 재생 기록을 찾지 못했어요. Google 테이크아웃의 YouTube 기록 zip이나 Spotify 데이터 zip을 압축 풀지 말고 그대로 넣어 주세요.';err.hidden=false;return}
     state.raw=plays; state.removed=new Set();
     state.all=C.mergeAliases(C.cleanArtists(plays.map(p=>({...p}))));
     state.mode='auto'; document.dispatchEvent(new Event('topster:auto'));
-    $('howto').hidden=true; $('board').hidden=false; $('addRec').hidden=false;
+    if(!pls.length&&!append) state.playlists=null;
+    state.src='history';
+    $('howto').hidden=true; $('board').hidden=false; $('addRec').hidden=false; syncSrc();
     build();
   }catch(e){console.error(e);err.textContent='파일을 읽지 못했어요. 받은 zip 파일을 그대로 넣어 주세요.';err.hidden=false}
 }
@@ -160,7 +178,46 @@ window.__topsterTest={deezerFind,itunesArtist};
 // 기본: 공식 음원만 (YouTube Music·Spotify 재생, YouTube의 공식 음원 Topic 채널)
 // 옵션: 시청 기록에서 음악으로 보이는 영상(뮤직비디오 등)도 추가
 const isOfficial=p=>p.src!=='yt'||p.topic;
+/* ---------- 재생목록: 동영상 ID → 제목·채널(YouTube oEmbed) → 곡 ---------- */
+const OE_KEY='topster-oembed-v1'; let oeCache={}; try{oeCache=JSON.parse(localStorage.getItem(OE_KEY)||'{}')||{}}catch(_){}
+async function oembed(id){
+  if(id in oeCache) return oeCache[id];
+  let v=null; try{ const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent('https://www.youtube.com/watch?v='+id));
+    if(r.ok){ const d=await r.json(); v={t:d.title,a:d.author_name} } else if(r.status===401||r.status===403||r.status===404) v=0 }catch(_){ return null }
+  oeCache[id]=v; return v;
+}
+async function loadPlaylistPlays(run){
+  if(state.plPlays) return state.plPlays;
+  const ids=[...new Set(state.playlists.flatMap(p=>p.items.map(x=>x.id)))], st=$('status'); let done=0, i=0;
+  st.innerHTML='재생목록 곡 정보 불러오는 중<span class="dots" aria-hidden="true"></span> <span id="stCount"></span>';
+  async function w(){ while(i<ids.length){ const id=ids[i++]; await oembed(id); done++; const c=$('stCount'); if(c) c.textContent=`${done}/${ids.length}` } }
+  await Promise.all(Array.from({length:8},w));
+  try{ localStorage.setItem(OE_KEY,JSON.stringify(oeCache)) }catch(_){}
+  if(run!==state.run) return null;
+  // 시청 기록과 같은 해석기를 쓰려고, 테이크아웃 시청 기록 모양으로 바꿔서 넣어요
+  const out=[];
+  for(const pl of state.playlists){
+    const entries=pl.items.map(x=>{const o=oeCache[x.id]; return o?{header:'YouTube',title:o.t+' 을(를) 시청했습니다.',titleUrl:'https://www.youtube.com/watch?v='+x.id,subtitles:[{name:o.a}],time:new Date(x.t||Date.now()).toISOString()}:null}).filter(Boolean);
+    C.parseJSON(entries).forEach(p=>{p.pl=pl.name; out.push(p)});
+  }
+  state.plPlays=C.mergeAliases(C.cleanArtists(out));
+  return state.plPlays;
+}
+function syncSrc(){
+  const sel=$('srcSel'), pls=state.playlists||[];
+  sel.hidden=!pls.length;
+  const opts=[...(state.all&&state.all.length?[['history','시청 기록']]:[]),...(pls.length>1?[['pl:*','모든 재생목록']]:[]),...pls.map((p,k)=>['pl:'+k,`${p.name} (${p.items.length})`])];
+  sel.innerHTML=opts.map(([v,l])=>`<option value="${esc(v)}"${v===state.src?' selected':''}>${esc(l)}</option>`).join('');
+  if(!opts.some(o=>o[0]===state.src)&&opts.length){ state.src=opts[0][0]; sel.value=state.src }
+  const pl=String(state.src).startsWith('pl:');
+  $('period').hidden=pl; $('vidBtn').hidden=pl||$('vidBtn').hidden;
+}
 function periodPlays(){
+  if(String(state.src).startsWith('pl:')){
+    const all=state.plPlays||[], k=state.src.slice(3);
+    if(k==='*'){ const seen=new Set(); return all.filter(p=>!p.dup&&!seen.has(p.url)&&seen.add(p.url)) }
+    const name=state.playlists[+k]&&state.playlists[+k].name; return all.filter(p=>!p.dup&&p.pl===name);
+  }
   let use=state.all.filter(p=>!p.dup&&(state.withVideos||isOfficial(p)));
   if(state.months){ const ts=state.all.map(p=>p.t).filter(isFinite); if(ts.length){ const end=new Date(Math.max(...ts)), from=new Date(end); from.setMonth(from.getMonth()-state.months); use=use.filter(p=>p.t>=from.getTime()) } }
   return use;
@@ -215,11 +272,13 @@ function aggregate(tracks){
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
   document.dispatchEvent(new Event('topster:start')); $('vidBtn').hidden=true;
+  if(String(state.src).startsWith('pl:')&&!state.plPlays){ $('saveBtn').disabled=true; const r=await loadPlaylistPlays(run); if(!r||!alive()) return }
   const plays=periodPlays(), tracks=trackTable(plays); state.tracks=tracks;
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
   const f=t=>{const d=new Date(t);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`};
-  state.metaBase=ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:''; updateMeta();
+  const plSrc=String(state.src).startsWith('pl:'), plName=plSrc?(state.src==='pl:*'?'모든 재생목록':(state.playlists[+state.src.slice(3)]||{}).name):'';
+  state.metaBase=plSrc?`${plName} · ${tracks.length.toLocaleString()}곡`:ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:''; updateMeta();
   const queue=[]; let cov=0;
   for(const t of tracks){ if(queue.length>=400||(cov>=total*.85&&queue.length>=60)) break; queue.push(t); cov+=t.plays }
   tracks.forEach(t=>{const c=cache[keyOf(t.artist,t.track)]; t.res=c===undefined||c==='dz'?undefined:c; t.dzMiss=c==='dz'});
@@ -293,11 +352,12 @@ $('list').addEventListener('click',e=>{
 
 function syncVidBtn(){
   const b=$('vidBtn'), extra=state.all?state.all.filter(p=>!p.dup&&!isOfficial(p)).length:0;
-  b.hidden=state.mode!=='auto'||(!extra&&!state.withVideos);
+  b.hidden=state.mode!=='auto'||String(state.src).startsWith('pl:')||(!extra&&!state.withVideos);
   b.textContent=state.withVideos?'공식 음원만 보기':`시청 기록에서 음원 자동 추가`;
   b.classList.toggle('hl',!state.withVideos&&state.albums.length<25);
 }
 document.addEventListener('topster:done',()=>{ if(state.mode==='auto') syncVidBtn() });
+$('srcSel').addEventListener('change',e=>{ state.src=e.target.value; state.removed=new Set(); $('detail').hidden=true; syncSrc(); build() });
 $('vidBtn').addEventListener('click',()=>{ if(!state.all||state.mode!=='auto') return; state.withVideos=!state.withVideos; $('detail').hidden=true; build() });
 // 커버 주소가 없어진 경우(검색 결과에는 있지만 이미지가 지워진 앨범) 깨진 그림 대신 이름 칸으로 바꿔요
 document.addEventListener('error',e=>{
