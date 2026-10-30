@@ -1,4 +1,5 @@
 .top-link{text-decoration:none;display:inline-flex;align-items:center}
+.view-banner[hidden],.map-more[hidden],#mapPost[hidden]{display:none!important}
 .view-banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;border:1.5px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-size:14px}
 .view-banner b{font-weight:600}
 .view-banner .sp{flex:1}
