@@ -23,7 +23,7 @@ const PCOLS='id,created_at,nickname,title,period,size,albums', TCOLS='id,created
 /* ---------- 게시판 목록 (탑스터 / 티어표) ---------- */
 const feeds={
   posts:{items:[],more:true,loading:false,path:b=>`posts?select=${PCOLS}&order=created_at.desc&limit=24${b}`,empty:'아직 올라온 탑스터가 없어요.'},
-  tiers:{items:[],more:true,loading:false,path:b=>`tierlists?select=${TCOLS}&post_id=is.null&order=created_at.desc&limit=24${b}`,empty:'아직 올라온 티어표가 없어요.'},
+  tiers:{items:[],more:true,loading:false,path:b=>`tierlists?select=${TCOLS}&order=created_at.desc&limit=24${b}`,empty:'아직 올라온 티어표가 없어요.'},
 };
 let tab='posts';
 async function loadMore(kind=tab){
@@ -48,7 +48,7 @@ function renderFeed(){
   $('feedEmpty').hidden=f.items.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':f.empty;
   $('feed').className='feed'+(tab==='tiers'?' feed-tiers':'');
   $('feed').innerHTML=f.items.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
-    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}</span></button>`).join('');
+    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
   $('feedMore').hidden=!f.more||!f.loaded;
 }
 document.querySelectorAll('#feedTabs button').forEach(b=>b.addEventListener('click',()=>{
@@ -90,8 +90,9 @@ async function loadComments(p){
 }
 function openTier(t){
   cur=null; maker=null;
-  $('viewBody').innerHTML=`<div class="poster-head"><h2>${kindBadge(t.kind)}${esc(t.title)}</h2><span class="poster-meta">${esc(t.nickname)} · ${fmtDate(t.created_at)}</span></div>${TM().renderStatic({...t,title:''})}`;
+  $('viewBody').innerHTML=`<div class="poster-head"><h2>${kindBadge(t.kind)}${esc(t.title)}</h2><span class="poster-meta">${esc(t.nickname)} · ${fmtDate(t.created_at)}</span></div>${TM().renderStatic({...t,title:''})}${t.post_id?'<div class="origin"><button type="button" class="btn" id="tOrigin">이 티어표를 단 탑스터 보기</button></div>':''}`;
   $('viewDel').onclick=()=>delItem('tier',t);
+  if(t.post_id) $('tOrigin').onclick=async()=>{ try{ const p=feeds.posts.items.find(x=>x.id===t.post_id)||(await api(`posts?select=${PCOLS}&id=eq.${t.post_id}`))[0]; if(p) openPost(p); else alert('원래 탑스터가 지워졌어요.') }catch(_){ alert('불러오지 못했어요.') } };
   $('viewDlg').showModal();
   try{history.replaceState(null,'','#t='+t.id)}catch(_){}
 }
@@ -103,7 +104,7 @@ async function delItem(kind,it){
   try{ const ok=await api(kind==='post'?'rpc/delete_post':'rpc/delete_tier',{method:'POST',body:JSON.stringify({p_id:it.id,p_password:pw})});
     if(!ok){alert('비밀번호가 맞지 않아요.');return}
     if(kind==='post'){ feeds.posts.items=feeds.posts.items.filter(x=>x.id!==it.id); $('viewDlg').close() }
-    else if(it.post_id&&cur){ loadComments(cur) }
+    else if(it.post_id&&cur){ feeds.tiers.items=feeds.tiers.items.filter(x=>x.id!==it.id); loadComments(cur) }
     else { feeds.tiers.items=feeds.tiers.items.filter(x=>x.id!==it.id); $('viewDlg').close() }
     renderFeed();
   }catch(e){alert('지우지 못했어요. 잠시 후 다시 시도해 주세요.')}
@@ -144,8 +145,9 @@ $('postForm').addEventListener('submit',async e=>{
       const {maker:m,postId}=pending, d=m.data(), albums=cleanAlbums(m.albums);
       const tiers=d.tiers.map(r=>({l:r.l||'?',c:TM().safeColor(r.c),i:r.i}));
       const id=await api('rpc/create_tier',{method:'POST',body:JSON.stringify({p_post_id:postId,p_kind:d.kind,p_nickname:nick,p_title:title,p_tiers:tiers,p_albums:albums,p_password:pw})});
-      if(postId){ if(cur&&cur.id===postId){ $('cCancel').click(); loadComments(cur) } }
-      else { feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:null,kind:d.kind,nickname:nick,title,tiers,albums}); showTab('tiers') }
+      feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:postId,kind:d.kind,nickname:nick,title,tiers,albums});
+      if(postId){ if(cur&&cur.id===postId){ $('cCancel').click(); loadComments(cur) } if(tab==='tiers') renderFeed() }
+      else showTab('tiers');
     }
     try{localStorage.setItem('topster-nick',nick)}catch(_){}
     $('postDlg').close(); $('pPw').value='';
@@ -160,7 +162,7 @@ loadMore('posts').then(async()=>{
   const m=location.hash.match(/^#([pt])=([0-9a-f-]{36})$/i); if(!m) return;
   try{
     if(m[1]==='p'){ const p=feeds.posts.items.find(x=>x.id===m[2])||(await api(`posts?select=${PCOLS}&id=eq.${m[2]}`))[0]; if(p) openPost(p) }
-    else { const t=(await api(`tierlists?select=${TCOLS}&id=eq.${m[2]}`))[0]; if(t) t.post_id?openPost((await api(`posts?select=${PCOLS}&id=eq.${t.post_id}`))[0]):openTier(t) }
+    else { const t=(await api(`tierlists?select=${TCOLS}&id=eq.${m[2]}`))[0]; if(t) openTier(t) }
   }catch(_){}
 });
 })();
