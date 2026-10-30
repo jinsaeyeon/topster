@@ -171,8 +171,13 @@ const COVER=/\bcover(?:ed)?\b|커버|\btabs?\b|타브|악보|fingerstyle|핑거\
 const LOOP=/\d+\s?시간|[\(\[]\s*\d+\s?(?:hours?|hrs?|h)\b[^\)\]]*[\)\]]|\d+\s?hours?\s?(?:loop|version|ver|edition|of|repeat)|(?:one|ten)\s?hours?|\d+hour|[\(\[]\s*loop\s*[\)\]]|loop\s?(?:version|ver)|반복\s?재생|연속\s?재생|무한\s?반복|1시간|playlist|플레이리스트|[\[\(]플리[\]\)]|플리\s?[|:｜]|노래\s?모음|곡\s?모음|모음집|compilation|nonstop|논스톱|작업할\s?때|공부할\s?때|study\s?with/i;
 // YouTube Music에서 재생해도 일반 사용자가 올린 영상(1시간 반복, 커버 등)일 수 있어서 같이 걸러요
 const COVER_STRICT=/\bcover(?:ed)?\b|커버|\btabs?\b|타브|악보|karaoke|노래방/i;
+// 음악이 아닌 영상(예능·애니 회차, 방송 클립, 리뷰 등)과 아티스트가 아닌 채널을 걸러요
+// 음악이 아닌 영상(예능·애니 회차, 방송 클립, 리뷰 등)과 아티스트가 아닌 채널을 걸러요
+const NONMUSIC_TRACK=/\d+\s?(?:회|화|편|부|탄)(?=$|[\s\)\]\-|:,.!?~]|[^가-힣\w])|(?:^|\s)(?:ep|e|episode)\.?\s?\d{1,3}\b|#\d{1,4}\b|예능|풀버전|하이라이트|리뷰|해설|브금|\bbgm\b|ost\s?모음|극장판|예고편|\btrailer\b|명장면|명대사|레전드|몰아보기|다시보기|생방송|라디오|인터뷰|\binterview\b|\bvlog\b|브이로그|먹방|\basmr\b|gameplay|플레이\s?영상|공략|walkthrough|해외\s?반응|모음\s?(?:집|영상)?$|요약|결말|줄거리|비하인드|behind\s?(?:the\s?scenes?|cam)|메이킹|making\s?(?:film|of)|직캠\s?모음|무대\s?모음|자막|full\s?episode|선공개/i;
+const NONMUSIC_ARTIST=/^(?:k-?pop|j-?pop|c-?pop|music|official|kpop|playlist|플레이리스트|음악|노래)$|^(?:kbs|mbc|sbs|mnet|jtbc|tvn|ebs|ytn|ocn|tving|wavve|netflix|넷플릭스|disney)\b|스포츠|\bsports?\b|뉴스|\bnews\b|브금|\bbgm\b|극장판|애니메이션|\banime\b|리뷰|\breview\b|방송|\btv\b|채널|\bchannel\b|엔터테인먼트|\bentertainment\b|클립|\bclips?\b|예능|드라마|\bdrama\b|영화|\bmovie\b|\bfilms?\b|게임|\bgaming\b|[가-힣]+tv$|술사$/i;
+const isNonMusic=p=>p&&p.src==='yt'&&!p.topic&&(NONMUSIC_TRACK.test(p.track||'')||NONMUSIC_ARTIST.test(String(p.artist||'').trim()));
 const skipVideo=p=>{ if(p.topic||p.src==='spotify') return false;
-  if(p.src==='yt') return COVER.test(p.track)||LOOP.test(p.track)||/\bMR\b/.test(p.track);
+  if(p.src==='yt') return isNonMusic(p)||COVER.test(p.track)||LOOP.test(p.track)||/\bMR\b/.test(p.track);
   return LOOP.test(p.track)||COVER_STRICT.test(p.track) };
 function trackTable(plays){
   const m=new Map();
