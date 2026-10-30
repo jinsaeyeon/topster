@@ -214,7 +214,7 @@ function aggregate(tracks){
 /* ---------- 실행 ---------- */
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
-  document.dispatchEvent(new Event('topster:start')); $('ytBtn').hidden=true; $('vidBtn').hidden=true;
+  document.dispatchEvent(new Event('topster:start')); $('vidBtn').hidden=true;
   const plays=periodPlays(), tracks=trackTable(plays); state.tracks=tracks;
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
@@ -257,12 +257,10 @@ async function build(){
   if(!alive()) return;
   state.albums=aggregate(tracks); render(false);
   // 25위 안에서 커버가 없는 앨범은 다른 결과에서 찾아 채워요
-  (async()=>{ for(const a of state.albums.slice(0,25)) if(!a.cover&&!a.yt&&run===state.run) await fixCover(a) })();
+  fillCovers();
   status.textContent=`앨범 ${state.albums.length}개를 찾았어요`;
   $('saveBtn').disabled=false;
   state.tracks=tracks;
-  const missing=tracks.filter(t=>t.res===null&&ytId(t.url)).length;
-  $('ytBtn').hidden=!missing; $('ytBtn').textContent=state.ytThumbs?'YouTube 썸네일 빼기':`못 찾은 ${missing}곡 YouTube 썸네일로 채우기`;
   document.dispatchEvent(new Event('topster:done'));
 }
 
@@ -301,13 +299,6 @@ function syncVidBtn(){
 }
 document.addEventListener('topster:done',()=>{ if(state.mode==='auto') syncVidBtn() });
 $('vidBtn').addEventListener('click',()=>{ if(!state.all||state.mode!=='auto') return; state.withVideos=!state.withVideos; $('detail').hidden=true; build() });
-$('ytBtn').addEventListener('click',()=>{
-  if(!state.tracks||state.mode!=='auto') return;
-  state.ytThumbs=!state.ytThumbs; state.albums=aggregate(state.tracks); render(false);
-  const missing=state.tracks.filter(t=>t.res===null&&ytId(t.url)).length;
-  $('ytBtn').textContent=state.ytThumbs?'YouTube 썸네일 빼기':`못 찾은 ${missing}곡 YouTube 썸네일로 채우기`;
-  document.dispatchEvent(new Event('topster:done'));
-});
 // 커버 주소가 없어진 경우(검색 결과에는 있지만 이미지가 지워진 앨범) 깨진 그림 대신 이름 칸으로 바꿔요
 document.addEventListener('error',e=>{
   const im=e.target; if(!im||im.tagName!=='IMG'||!im.closest('.tile,.mres,.titem')) return;
@@ -341,9 +332,14 @@ async function findCover(album,artist){
   for(const c of [...new Set(cands)]) if(!coverTried.has(c)){ coverTried.add(c); if(await imgOK(c)) return c }
   return null;
 }
+// 보이는 25칸 중 커버가 없는 칸을 채워요
+async function fillCovers(){ const run=state.run; for(const a of state.albums.slice(0,25)) if(!a.cover&&!a.yt&&run===state.run) await fixCover(a) }
 async function fixCover(a){
   const key=K(a.artist)+'|'+K(a.album); if(coverTried.has(key)) return; coverTried.add(key);
-  const c=await findCover(a.album,a.artist); if(!c||!state.albums.includes(a)) return;
+  let c=await findCover(a.album,a.artist);
+  // 음악 검색에서도 커버를 못 찾으면, 그 앨범에서 가장 많이 들은 곡의 YouTube 영상 썸네일을 써요
+  if(!c){ const t=a.tracks&&a.tracks.length?[...a.tracks].sort((x,y)=>y.plays-x.plays).find(x=>ytId(x.url)):null; if(t) c=`https://i.ytimg.com/vi/${ytId(t.url)}/mqdefault.jpg` }
+  if(!c||!state.albums.includes(a)) return;
   a.cover=c; render(false); document.dispatchEvent(new Event('topster:cover'));
 }
 window.__app={state,render,jsonp,fixCover,build};
@@ -357,7 +353,7 @@ function updateMeta(){
 $('grid').addEventListener('click',e=>{
   const rm=e.target.closest('.rm[data-rmk]'); if(!rm||state.mode!=='auto') return;
   e.preventDefault(); e.stopPropagation();
-  state.removed.add(rm.dataset.rmk); state.albums=aggregate(state.tracks||[]); render(false); updateMeta();
+  state.removed.add(rm.dataset.rmk); state.albums=aggregate(state.tracks||[]); render(false); updateMeta(); fillCovers();
   document.dispatchEvent(new Event('topster:done'));
 },true);
 $('grid').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rm[data-rmk]')){ e.preventDefault(); e.target.click() } });

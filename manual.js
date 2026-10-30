@@ -17,7 +17,7 @@ function enter(){
   let saved=[]; try{saved=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){}
   state.albums=Array.isArray(saved)?saved.filter(x=>x&&x.al).map(x=>mk(String(x.al),String(x.ar||''),x.c||null)):[];
   $('howto').hidden=true; $('err').hidden=true; $('board').hidden=false; $('detail').hidden=true;
-  $('ytBtn').hidden=true; $('vidBtn').hidden=true; $('undoEdit').hidden=true; $('addRec').hidden=true; $('period').hidden=true; $('autoNote').hidden=true; $('mPanel').hidden=false;
+  $('vidBtn').hidden=true; $('undoEdit').hidden=true; $('addRec').hidden=true; $('period').hidden=true; $('autoNote').hidden=true; $('mPanel').hidden=false;
   $('status').textContent=''; $('posterMeta').textContent='직접 만든 탑스터'; $('saveBtn').disabled=false;
   if($('posterTitle').textContent.trim()==='') $('posterTitle').textContent='나의 탑스터';
   changed(); $('mQuery').focus();
