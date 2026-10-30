@@ -777,7 +777,7 @@ function panel(name){
   const relBtn=(n,txt,pct)=>`<li><button class="rel-btn" data-n="${esc(n)}"><span class="row"><span class="t">${esc(n)}</span><span class="n">${txt}</span><span class="bar"><span style="width:${pct}%"></span></span></span></button></li>`;
   el.innerHTML=`
     <div>
-      <span class="chip"><i style="background:${gcol(a.genre)}"></i>${esc(a.genre)}${a.inferred?(a.co?'<em>추정 · 함께 들은 곡 기준</em>':'<em>추정</em>'):''}${a.ai?'<em>Claude 분류</em>':''}</span>
+      <span class="chip"><i style="background:${gcol(a.genre)}"></i>${esc(a.genre)}${a.inferred?(a.co?'<em>추정 · 함께 들은 곡 기준</em>':'<em>추정</em>'):''}${a.ai?'<em>음악 검색 분류</em>':''}</span>
       <div class="aname">${esc(a.name)}</div>
       <div class="ameta">${a.plays.toLocaleString()}회 재생 · 곡 ${a.tracks.size}개</div>
     </div>
@@ -957,10 +957,11 @@ const app=document.getElementById('app');
 app.addEventListener('drop',e=>loadFiles(e.dataTransfer.files));
 ['artistCount','linkCount'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{document.getElementById(id+'Out').value=e.target.value;render()}));
 
-window.__map={get state(){return state},load,gcol,analyze,genreOf:n=>{ const i=glIndex(n), xg=xgOf(n), xbo=xboOf(n), xe=xeOf(n)&&(!xg||xg==='기타'); return G[norm(n)]||(i!=null&&GL.g[i]>=0?GL_GENRES[GL.g[i]]:null)||(xbo.b?'발라드·가요':null)||bgGenre(n)||(xe?'EDM':null)||xg||(xbo.o?'OST':null)||xpOf(n)||AIG[norm(n)]||null }};
+window.__map={get state(){return state},load,gcol,analyze,unknownArtists,norm,nz,nameVariants,setGenres:o=>{ Object.assign(AIG,o); try{localStorage.setItem('music-genre-ai',JSON.stringify(AIG))}catch(e){} const keep=state.selected; load(); if(keep&&typeof select==='function') try{select(keep)}catch(e){} },genreOf:n=>{ const i=glIndex(n), xg=xgOf(n), xbo=xboOf(n), xe=xeOf(n)&&(!xg||xg==='기타'); return G[norm(n)]||(i!=null&&GL.g[i]>=0?GL_GENRES[GL.g[i]]:null)||(xbo.b?'발라드·가요':null)||bgGenre(n)||(xe?'EDM':null)||xg||(xbo.o?'OST':null)||xpOf(n)||AIG[norm(n)]||null }};
 load(samplePlays(),'sample');
 })();
 </script>
 
 <script src="mapboard.js?v=4"></script>
+<script src="genre.js?v=1"></script>
 </html>
