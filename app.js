@@ -110,35 +110,39 @@ async function deezer(q){
   return (d&&d.data||[]).map(x=>({title:x.title,artist:x.artist&&x.artist.name,album:x.album&&x.album.title,albumArtist:x.artist&&x.artist.name,cover:x.album&&(x.album.cover_big||x.album.cover_medium),src:'deezer'}));
 }
 let itLast=0;
-async function itunes(q,cc){
+async function itunes(q,cc,limit=8){
   const wait=Math.max(0,itLast+3200-Date.now()); itLast=Date.now()+wait; if(wait) await new Promise(r=>setTimeout(r,wait));
-  const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country='+cc+'&term='+encodeURIComponent(q));
+  const d=await jsonp('https://itunes.apple.com/search?entity=song&limit='+limit+'&country='+cc+'&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v7'; try{['v1','v2','v3','v4','v5','v6'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
+const CACHE_KEY='topster-cache-v8'; try{['v1','v2','v3','v4','v5','v6','v7'].forEach(v=>localStorage.removeItem('topster-cache-'+v))}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
-async function lookup(artist,track){
-  const key=K(artist)+'|'+K(track);
-  if(key in cache) return cache[key];
-  const t=cleanTrack(track); let hit=null;
-  // 일본 곡은 Deezer에 로마자로만 있는 경우가 많아 iTunes 일본 스토어를 먼저 봐요
-  const jp=/[\u3040-\u30ff]/.test(artist+t), ko=/[\uac00-\ud7a3]/.test(artist+t);
-  const steps=[
-    ...(jp?[()=>itunes(artist+' '+t,'JP')]:[]),
-    ()=>deezer(`artist:"${artist}" track:"${t}"`),
-    ()=>deezer(artist+' '+t),
-    ...alias(artist).filter(n=>n!==artist&&scriptOf(n)!==scriptOf(artist)).slice(0,1).map(n=>()=>deezer(n+' '+t)),
-    ()=>deezer(t),
-    ...(jp?[]:[()=>itunes(artist+' '+t,ko?'KR':'US')]),
-    ()=>itunes(artist+' '+t,jp?'US':ko?'JP':'KR'),
-  ];
-  for(const s of steps){ if(hit) break; try{ hit=pick(await s(),artist,t) }catch(_){} }
-  const val=hit?{album:hit.album,artist:hit.albumArtist||hit.artist,cover:hit.cover}:null;
-  cache[key]=val; saveCache(); return val;
+// Deezer는 빠르니(5초에 50번) 넓게 먼저, iTunes(1분에 20번)는 Deezer에 없는 곡만 아티스트 단위로
+let dzNext=0;
+async function dz(q){ const now=Date.now(), at=Math.max(now,dzNext); dzNext=at+110; if(at>now) await new Promise(r=>setTimeout(r,at-now)); return deezer(q) }
+const keyOf=(a,t)=>K(a)+'|'+K(t);
+const toVal=hit=>hit?{album:hit.album,artist:hit.albumArtist||hit.artist,cover:hit.cover}:null;
+async function deezerFind(artist,track){
+  const t=cleanTrack(track);
+  const steps=[()=>dz(`artist:"${artist}" track:"${t}"`),()=>dz(artist+' '+t),
+    ...alias(artist).filter(n=>n!==artist&&scriptOf(n)!==scriptOf(artist)).slice(0,1).map(n=>()=>dz(n+' '+t))];
+  for(const s of steps){ try{ const hit=pick(await s(),artist,t); if(hit) return hit }catch(_){} }
+  return null;
+}
+async function itunesArtist(artist,tracks){
+  const jp=/[぀-ヿ]/.test(artist+tracks.map(t=>t.track).join('')), ko=/[가-힣]/.test(artist);
+  const latin=alias(artist).find(n=>scriptOf(n)==='la'&&n!==artist);
+  const tries=jp?[[artist,'JP']]:ko?[[artist,'KR'],[latin||artist,'US']]:[[artist,'US'],[artist,'KR']];
+  for(const [term,cc] of tries){
+    let list=[]; try{ list=await itunes(term,cc,200) }catch(_){ continue }
+    let any=false;
+    for(const t of tracks){ if(t.res) continue; const hit=pick(list,artist,cleanTrack(t.track)); if(hit){t.res=toVal(hit);any=true} }
+    if(any||tracks.every(t=>t.res)) break;
+  }
 }
 
-window.__topsterLookup=lookup;
+window.__topsterTest={deezerFind,itunesArtist};
 /* ---------- 집계 ---------- */
 function periodPlays(){
   let use=state.all.filter(p=>!p.dup);
@@ -168,28 +172,45 @@ function aggregate(tracks){
 
 /* ---------- 실행 ---------- */
 async function build(){
-  const run=++state.run;
+  const run=++state.run, alive=()=>run===state.run;
   const plays=periodPlays(), tracks=trackTable(plays);
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
   const f=t=>{const d=new Date(t);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`};
   $('posterMeta').textContent=ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:'';
-  // 많이 들은 곡부터 찾아서, 전체 재생의 85%를 덮거나 400곡까지
   const queue=[]; let cov=0;
   for(const t of tracks){ if(queue.length>=400||(cov>=total*.85&&queue.length>=60)) break; queue.push(t); cov+=t.plays }
-  tracks.forEach(t=>{const key=K(t.artist)+'|'+K(t.track); t.res=key in cache?cache[key]:undefined});
-  state.albums=aggregate(tracks); render(true);
-  let done=0; const todo=queue.filter(t=>t.res===undefined);
+  tracks.forEach(t=>{const c=cache[keyOf(t.artist,t.track)]; t.res=c===undefined||c==='dz'?undefined:c; t.dzMiss=c==='dz'});
   const status=$('status'); $('saveBtn').disabled=true;
-  let i=0; const N=todo.length;
-  async function worker(){ while(i<todo.length){ const t=todo[i++]; if(run!==state.run) return;
-      t.res=await lookup(t.artist,t.track); done++;
-      if(run===state.run){ status.textContent=`앨범 찾는 중 ${done}/${N}`; if(done%4===0||done===N){state.albums=aggregate(tracks);render(true)} } } }
-  await Promise.all([worker(),worker(),worker()]);
-  if(run!==state.run) return;
+  const refresh=()=>{state.albums=aggregate(tracks);render(true)};
+  refresh();
+  // 25위 안의 앨범이 더 바뀔 수 없으면 멈춰요
+  const settled=rest=>{const a=state.albums=aggregate(tracks); return a.length>25&&a[24].plays>=a[25].plays+rest};
+
+  // 1단계: Deezer
+  const todo=queue.filter(t=>t.res===undefined&&!t.dzMiss);
+  let i=0,done=0,stop=false; const remain=()=>todo.slice(i).reduce((s,t)=>s+t.plays,0);
+  async function worker(){ while(i<todo.length&&!stop&&alive()){ const t=todo[i++];
+      const hit=await deezerFind(t.artist,t.track); if(!alive()) return;
+      if(hit){t.res=toVal(hit);cache[keyOf(t.artist,t.track)]=t.res} else {t.dzMiss=true;cache[keyOf(t.artist,t.track)]='dz'}
+      saveCache(); done++; status.textContent=`앨범 찾는 중 ${done}/${todo.length}`;
+      if(done%6===0){ refresh(); if(settled(remain())) stop=true } } }
+  await Promise.all(Array.from({length:6},worker));
+  if(!alive()) return; refresh();
+
+  // 2단계: Deezer에 없는 곡을 아티스트별로 iTunes에서 (순위에 들 수 있는 아티스트만)
+  const miss=queue.filter(t=>t.res===undefined&&t.dzMiss), byArtist=new Map();
+  miss.forEach(t=>{const k=K(t.artist); if(!byArtist.has(k)) byArtist.set(k,{artist:t.artist,tracks:[],sum:0}); const g=byArtist.get(k); g.tracks.push(t); g.sum+=t.plays});
+  const groups=[...byArtist.values()].sort((a,b)=>b.sum-a.sum);
+  const cut=()=>{const a=state.albums; return a.length>=25?a[24].plays:0};
+  let gi=0;
+  for(const g of groups){ if(!alive()) return; if(g.sum<cut()) break; gi++;
+    status.textContent=`앨범 찾는 중 · ${g.artist} (${gi})`;
+    await itunesArtist(g.artist,g.tracks); if(!alive()) return;
+    g.tracks.forEach(t=>{cache[keyOf(t.artist,t.track)]=t.res||null; if(!t.res) t.res=null}); saveCache(); refresh(); }
+  if(!alive()) return;
   state.albums=aggregate(tracks); render(false);
-  const found=queue.filter(t=>t.res).length;
-  status.textContent=`곡 ${queue.length}개 중 ${found}개의 앨범을 찾았어요`;
+  status.textContent=`앨범 ${state.albums.length}개를 찾았어요`;
   $('saveBtn').disabled=false;
 }
 
