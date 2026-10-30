@@ -109,9 +109,11 @@ function pick(list,artist,track){
   });
   return best;
 }
+// Deezer는 커버가 없는 앨범에도 빈 주소(/cover//)를 줘서 회색 기본 그림이 떠요 → 커버 없음으로 처리
+const realCover=u=>u&&!/\/(?:cover|artist)\/\//.test(u)?u:null;
 async function deezer(q){
   const d=await jsonp('https://api.deezer.com/search?limit=8&output=jsonp&q='+encodeURIComponent(q));
-  return (d&&d.data||[]).map(x=>({title:x.title,artist:x.artist&&x.artist.name,album:x.album&&x.album.title,albumArtist:x.artist&&x.artist.name,cover:x.album&&(x.album.cover_big||x.album.cover_medium),src:'deezer'}));
+  return (d&&d.data||[]).map(x=>({title:x.title,artist:x.artist&&x.artist.name,album:x.album&&x.album.title,albumArtist:x.artist&&x.artist.name,cover:x.album&&realCover(x.album.cover_big||x.album.cover_medium),src:'deezer'}));
 }
 let itLast=0;
 async function itunes(q,cc,limit=8){
@@ -195,8 +197,8 @@ function aggregate(tracks){
     const a=t.res; if(!a) continue;
     // 같은 아티스트라도 검색처마다 표기가 달라서(サカナクション / Sakanaction) 내 기록의 아티스트 이름으로 묶어요
     const k=K(t.artist)+'|'+K(albumBase(a.album)); let e=m.get(k);
-    if(!e){e={album:albumBase(a.album),artist:t.artist,cover:a.cover,plays:0,tracks:[]};m.set(k,e)}
-    if(!e.cover&&a.cover) e.cover=a.cover;
+    if(!e){e={album:albumBase(a.album),artist:t.artist,cover:realCover(a.cover),plays:0,tracks:[]};m.set(k,e)}
+    if(!e.cover&&realCover(a.cover)) e.cover=a.cover;
     e.plays+=t.plays; e.tracks.push(t); }
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
 }
@@ -246,6 +248,8 @@ async function build(){
     g.tracks.forEach(t=>{cache[keyOf(t.artist,t.track)]=t.res||null; if(!t.res) t.res=null}); saveCache(); refresh(); }
   if(!alive()) return;
   state.albums=aggregate(tracks); render(false);
+  // 25위 안에서 커버가 없는 앨범은 다른 결과에서 찾아 채워요
+  (async()=>{ for(const a of state.albums.slice(0,25)) if(!a.cover&&!a.yt&&run===state.run) await fixCover(a) })();
   status.textContent=`앨범 ${state.albums.length}개를 찾았어요`;
   $('saveBtn').disabled=false;
   state.tracks=tracks;
@@ -316,7 +320,7 @@ async function findCover(album,artist){
   try{ const d=await jsonp(`https://itunes.apple.com/search?entity=album&limit=15&country=${jp?'JP':'US'}&term=`+encodeURIComponent(q));
     (d&&d.results||[]).filter(x=>sameAl(x.collectionName)&&artistMatch(artist,x.artistName)).forEach(x=>x.artworkUrl100&&cands.push(x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'))) }catch(_){}
   try{ const d=await jsonp('https://api.deezer.com/search/album?limit=15&output=jsonp&q='+encodeURIComponent(q));
-    (d&&d.data||[]).filter(x=>sameAl(x.title)&&artistMatch(artist,x.artist&&x.artist.name)).forEach(x=>x.cover_big&&cands.push(x.cover_big)) }catch(_){}
+    (d&&d.data||[]).filter(x=>sameAl(x.title)&&artistMatch(artist,x.artist&&x.artist.name)).forEach(x=>realCover(x.cover_big)&&cands.push(x.cover_big)) }catch(_){}
   for(const c of [...new Set(cands)]) if(!coverTried.has(c)){ coverTried.add(c); if(await imgOK(c)) return c }
   return null;
 }

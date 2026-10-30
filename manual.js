@@ -30,7 +30,7 @@ let seq=0, tmr=null, results=[];
 const hasKana=s=>/[぀-ヿ]/.test(s), hasHangul=s=>/[가-힣]/.test(s);
 // 앨범 이름이 로마자로만 올라간 경우(킁 → Keung)가 많아서, 앨범·곡·아티스트 검색을 함께 해요
 const dz=(path,q,extra='')=>A.jsonp(`https://api.deezer.com/${path}?output=jsonp${extra}&q=`+encodeURIComponent(q)).then(d=>d&&d.data||[]).catch(()=>[]);
-const dzAlbum=x=>({id:'dz'+x.id,al:x.title,ar:x.artist&&x.artist.name,c:x.cover_big||x.cover_medium});
+const dzAlbum=x=>{const c=x.cover_big||x.cover_medium; return {id:'dz'+x.id,al:x.title,ar:x.artist&&x.artist.name,c:c&&!/\/cover\/\//.test(c)?c:null}};
 const itCache=new Map();
 const itunes=path=>{ if(!itCache.has(path)) itCache.set(path,A.jsonp('https://itunes.apple.com/'+path).then(d=>d&&d.results||[]).catch(()=>{itCache.delete(path);return []})); return itCache.get(path) };
 // 한글 앨범 이름을 로마자로도 맞춰 봐요 (킁 → keung)
