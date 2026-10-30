@@ -5,6 +5,7 @@
 }
 @media (prefers-color-scheme:dark){:root{--bg:#0f0e12;--panel:#17161b;--fg:#f1efe9;--muted:#9a97a3;--line:#2c2a33;--accent:#ff7a4d;--tile:#26242c;color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans)}
 .app{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
 .app.drop{outline:2px dashed var(--accent);outline-offset:-12px}
