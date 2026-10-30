@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const C=window.Core;
-const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false,withVideos:false};
+const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false,withVideos:false,removed:new Set(),metaBase:''};
 
 /* ---------- 기록 파일 읽기 (음악 지도와 같은 규칙) ---------- */
 const SPOTIFY_FILE=/(StreamingHistory|Streaming_History_Audio|endsong)[^/]*\.json$/i;
@@ -49,7 +49,7 @@ async function loadFiles(files,append){
     if(append&&state.raw) plays=state.raw.concat(plays);
     { const seen=new Set(); plays=plays.filter(p=>{const k=p.t+'|'+p.artist+'|'+p.track; if(isFinite(p.t)&&seen.has(k)) return false; seen.add(k); return true}); }
     if(plays.length<10){err.textContent='이 파일에서 음악 재생 기록을 찾지 못했어요. Google 테이크아웃의 YouTube 기록 zip이나 Spotify 데이터 zip을 압축 풀지 말고 그대로 넣어 주세요.';err.hidden=false;return}
-    state.raw=plays;
+    state.raw=plays; state.removed=new Set();
     state.all=C.mergeAliases(C.cleanArtists(plays.map(p=>({...p}))));
     state.mode='auto'; document.dispatchEvent(new Event('topster:auto'));
     $('howto').hidden=true; $('board').hidden=false; $('addRec').hidden=false;
@@ -193,6 +193,7 @@ function trackTable(plays){
   return [...m.values()].sort((a,b)=>b.plays-a.plays);
 }
 const ytId=u=>{const m=String(u||'').match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/); return m?m[1]:null};
+const albumKey=a=>(a.yt?'yt|':'')+K(a.artist)+'|'+K(a.album);
 function aggregate(tracks){
   const m=new Map();
   for(const t of tracks){
@@ -206,18 +207,19 @@ function aggregate(tracks){
     if(!e){e={album:albumBase(a.album),artist:t.artist,cover:realCover(a.cover),plays:0,tracks:[]};m.set(k,e)}
     if(!e.cover&&realCover(a.cover)) e.cover=a.cover;
     e.plays+=t.plays; e.tracks.push(t); }
-  return [...m.values()].sort((a,b)=>b.plays-a.plays);
+  // 탑스터에서 직접 뺀 앨범은 제외 (자동 · 편집됨)
+  return [...m.values()].filter(a=>!state.removed.has(albumKey(a))).sort((a,b)=>b.plays-a.plays);
 }
 
 /* ---------- 실행 ---------- */
 async function build(){
   const run=++state.run, alive=()=>run===state.run;
   document.dispatchEvent(new Event('topster:start')); $('ytBtn').hidden=true; $('vidBtn').hidden=true;
-  const plays=periodPlays(), tracks=trackTable(plays);
+  const plays=periodPlays(), tracks=trackTable(plays); state.tracks=tracks;
   const total=tracks.reduce((s,t)=>s+t.plays,0);
   const ts=plays.map(p=>p.t).filter(isFinite);
   const f=t=>{const d=new Date(t);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`};
-  $('posterMeta').textContent=ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:'';
+  state.metaBase=ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:''; updateMeta();
   const queue=[]; let cov=0;
   for(const t of tracks){ if(queue.length>=400||(cov>=total*.85&&queue.length>=60)) break; queue.push(t); cov+=t.plays }
   tracks.forEach(t=>{const c=cache[keyOf(t.artist,t.track)]; t.res=c===undefined||c==='dz'?undefined:c; t.dzMiss=c==='dz'});
@@ -279,7 +281,7 @@ function render(loading){
     const inner=a.cover?`<img src="${esc(a.cover)}" alt="${esc(a.album)} — ${esc(a.artist)}" crossorigin="anonymous" loading="lazy">`:`<div class="ph"><b>${esc(a.album)}</b>${esc(a.artist)}</div>`;
     if(manual) return `<div class="tile mtile" data-i="${i}">${inner}<span class="rank">${i+1}</span><span class="info"><b>${esc(a.album)}</b><span>${esc(a.artist)}</span></span><button type="button" class="rm" data-rm="${i}" aria-label="빼기">×</button></div>`;
     const tt=topTrack(a);
-    return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" aria-label="${esc(a.album)} — ${esc(a.artist)}">${inner}<span class="rank">${i+1}</span><span class="info"><b>${esc(a.album)}</b><span>${esc(a.artist)}</span><em>${a.plays.toLocaleString()}회 재생</em></span></a>`}).join('');
+    return `<a class="tile" href="${esc(trackUrl(tt))}" target="_blank" rel="noopener" aria-label="${esc(a.album)} — ${esc(a.artist)}">${inner}<span class="rank">${i+1}</span><span class="info"><b>${esc(a.album)}</b><span>${esc(a.artist)}</span><em>${a.plays.toLocaleString()}회 재생</em></span><span class="rm" role="button" tabindex="0" data-rmk="${esc(albumKey(a))}" aria-label="빼기">×</span></a>`}).join('');
   list.innerHTML=top.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><button type="button" class="li-btn" data-i="${i}"><span class="al">${esc(a.album)}</span> <span class="ar">— ${esc(a.artist)}</span></button>${manual?'':`<span class="cnt">${a.plays.toLocaleString()}</span>`}</li>`).join('');
   $('poster').classList.toggle('nolist',!state.showList);
 }
@@ -345,11 +347,26 @@ async function fixCover(a){
   a.cover=c; render(false); document.dispatchEvent(new Event('topster:cover'));
 }
 window.__app={state,render,jsonp,fixCover,build};
+// 자동 탑스터에서 × 로 앨범 빼기
+function updateMeta(){
+  if(state.mode!=='auto') return;
+  const ed=state.removed.size>0;
+  $('posterMeta').textContent=[state.metaBase,ed?'자동 · 편집됨':'자동'].filter(Boolean).join(' · ');
+  $('undoEdit').hidden=!ed;
+}
+$('grid').addEventListener('click',e=>{
+  const rm=e.target.closest('.rm[data-rmk]'); if(!rm||state.mode!=='auto') return;
+  e.preventDefault(); e.stopPropagation();
+  state.removed.add(rm.dataset.rmk); state.albums=aggregate(state.tracks||[]); render(false); updateMeta();
+  document.dispatchEvent(new Event('topster:done'));
+},true);
+$('grid').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rm[data-rmk]')){ e.preventDefault(); e.target.click() } });
+$('undoEdit').addEventListener('click',()=>{ state.removed.clear(); state.albums=aggregate(state.tracks||[]); render(false); updateMeta(); document.dispatchEvent(new Event('topster:done')) });
 // 게시판(board.js)에 넘길 지금 탑스터
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),
   top:k=>state.albums.slice(0,k).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,p:a.plays}}),
   snapshot:()=>({title:$('posterTitle').textContent.trim()||'나의 탑스터',period:state.mode==='manual'?'0':String(state.months),size:state.n,
-    albums:state.albums.slice(0,state.n*state.n).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}})})};
+    albums:state.albums.slice(0,state.n*state.n).map((a,i)=>{const t=topTrack(a);const o={al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}; if(i===0&&state.mode==='auto'&&state.removed.size) o.ed=1; return o})})};
 /* ---------- 이미지 저장 ---------- */
 function loadImg(src){return new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>r(im);im.onerror=()=>r(null);im.src=src})}
 function wrap(ctx,text,max){const out=[];let line='';for(const ch of String(text)){if(ctx.measureText(line+ch).width>max&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out}
