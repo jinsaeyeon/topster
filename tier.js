@@ -13,7 +13,7 @@ function itemHTML(a,i){
 }
 
 /* ---------- 만들기 (끌어서 놓기) ---------- */
-const KIND={music:'곡 기준',cover:'커버 기준'};
+const KIND={music:'곡 기준',cover:'앨범 아트 기준'};
 function create(root,albums,{title='앨범 티어표'}={}){
   root.classList.add('tmk'); let kind='music';
   function reset(){

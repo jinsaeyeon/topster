@@ -11,7 +11,7 @@ const safeLink=u=>{ if(typeof u!=='string'||!/^https:\/\/((www|m|music)\.youtube
 const PERIOD={'6':'최근 6개월','12':'1년','0':'전체'};
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 const TM=()=>window.TierMaker;
-const kindBadge=k=>k==='cover'?'<span class="kind kind-cover">커버 기준</span>':k==='music'?'<span class="kind">곡 기준</span>':'';
+const kindBadge=k=>k==='cover'?'<span class="kind kind-cover">앨범 아트 기준</span>':k==='music'?'<span class="kind">곡 기준</span>':'';
 
 async function api(path,opt={}){
   const r=await fetch(SB+'/rest/v1/'+path,{...opt,headers:{...H,...(opt.headers||{})}});

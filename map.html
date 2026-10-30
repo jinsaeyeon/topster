@@ -2,6 +2,7 @@
 <html lang="ko">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="mapboard.css?v=1">
 <title>내 플레이리스트 생태계</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,12 +130,14 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--groove);padding:1
     </div>
     <div class="source">
       <span class="badge" id="srcBadge">예시 데이터</span>
-      <label class="btn" for="file" tabindex="0">내 기록 불러오기</label>
       <input type="file" id="file" accept=".zip,.json,.html,.htm" multiple hidden>
       <label class="btn ghost" for="fileAdd" tabindex="0" id="addBtn" hidden>다른 계정 기록 추가</label>
+      <button type="button" class="btn hl" id="mapPost" hidden>게시판에 올리기</button>
+      <a class="btn ghost top-link" href="./">탑스터 만들기 →</a>
       <input type="file" id="fileAdd" accept=".zip,.json,.html,.htm" multiple hidden>
     </div>
   </header>
+  <div class="view-banner" id="viewBanner" hidden><b id="viewWho"></b><span class="sp"></span><button type="button" class="btn ghost" id="viewDel">삭제</button><button type="button" class="btn" id="viewBack">내 지도로 돌아가기</button></div>
   <div class="err" id="err" hidden></div>
   <section class="howto" id="howto" aria-labelledby="howtoTitle">
     <div class="howto-head">
@@ -196,8 +199,22 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--groove);padding:1
     <aside id="panel" aria-live="polite"></aside>
   </div>
 
+  <section class="map-board" id="mapBoard">
+    <div class="map-board-h"><h2>게시판</h2></div>
+    <p class="hint" id="mapFeedEmpty" hidden></p>
+    <div class="mfeed" id="mapFeed"></div>
+    <button type="button" class="btn ghost map-more" id="mapFeedMore" hidden>더 보기</button>
+  </section>
 </div>
 
+<dialog class="mdlg" id="mapPostDlg"><form id="mapPostForm">
+  <h3>게시판에 올리기</h3>
+  <label>닉네임<input id="mpNick" maxlength="20" required autocomplete="nickname"></label>
+  <label>제목<input id="mpTitle" maxlength="40" required value="나의 플레이리스트 생태계"></label>
+  <label>비밀번호 <span class="hint">지울 때 필요해요</span><input id="mpPw" type="password" minlength="4" maxlength="50" required autocomplete="new-password"></label>
+  <p class="err" id="mpErr" hidden></p>
+  <div class="mdlg-btns"><button type="button" class="btn ghost" id="mpCancel">취소</button><button class="btn" id="mpSubmit">올리기</button></div>
+</form></dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
@@ -940,8 +957,10 @@ const app=document.getElementById('app');
 app.addEventListener('drop',e=>loadFiles(e.dataTransfer.files));
 ['artistCount','linkCount'].forEach(id=>document.getElementById(id).addEventListener('input',e=>{document.getElementById(id+'Out').value=e.target.value;render()}));
 
+window.__map={get state(){return state},load};
 load(samplePlays(),'sample');
 })();
 </script>
 
+<script src="mapboard.js?v=1"></script>
 </html>
