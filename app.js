@@ -78,11 +78,22 @@ function titleMatch(ours,theirs){
   if((a.includes(b)||b.includes(a))&&Math.min(a.length,b.length)/Math.max(a.length,b.length)>=.6) return 1;
   return 0;
 }
+// 노래방·커버·반주 버전이나 모음집이 원곡 앨범 대신 잡히지 않게 걸러요
+const ALT=/karaoke|カラオケ|ガイド|노래방|반주|\binst(?:rumental)?\b|off\s?vocal|[(\[]mr[)\]]|\bmr\s?ver|cover(?:ed)?\s?(?:by|ver)|tribute|原曲|オルゴール|music\s?box|lullaby|8.?bit|piano\s?ver|in\s?the\s?style\s?of|made\s?famous/i;
+const COMP=/various|compilation|best\s?of|hits|모음|ヒット|オムニバス|now\s?that/i;
 function pick(list,artist,track){
-  let best=null,bs=0;
-  for(const r of list){ const t=titleMatch(track,r.title); if(!t) continue;
-    const am=artistMatch(artist,r.artist), s=t*2+(am?3:0);
-    if(s>bs&&(am||t===2)){bs=s;best=r} }
+  const ourAlt=ALT.test(track);
+  let best=null,bs=-1;
+  for(const r of list){
+    const t=titleMatch(track,r.title); if(!t) continue;
+    if(!artistMatch(artist,r.artist)) continue;
+    if(!ourAlt&&(ALT.test(r.title)||ALT.test(r.album||'')||ALT.test(r.artist||''))) continue;
+    let s=t*3;
+    if(r.albumArtist&&artistMatch(artist,r.albumArtist)) s+=2;
+    if(COMP.test(r.album||'')||COMP.test(r.albumArtist||'')) s-=3;
+    if(K(r.title)===K(track)) s+=1;
+    if(s>bs){bs=s;best=r}
+  }
   return best;
 }
 async function deezer(q){
@@ -95,7 +106,7 @@ async function itunes(q){
   const d=await jsonp('https://itunes.apple.com/search?entity=song&limit=8&country=KR&term='+encodeURIComponent(q));
   return (d&&d.results||[]).map(x=>({title:x.trackName,artist:x.artistName,album:x.collectionName,albumArtist:x.collectionArtistName||x.artistName,cover:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.'),src:'itunes'}));
 }
-const CACHE_KEY='topster-cache-v1';
+const CACHE_KEY='topster-cache-v2'; try{localStorage.removeItem('topster-cache-v1')}catch(_){}
 let cache={}; try{cache=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch(_){cache={}}
 let saveT=null; function saveCache(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch(_){}},800)}
 async function lookup(artist,track){
