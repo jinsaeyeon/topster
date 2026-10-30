@@ -460,5 +460,5 @@ function buildTree(an,nArtists,nLinks){
 }
 
 var AIG={};
-window.Core={parseJSON,parseHTML,parseLooseDate,cleanArtists,mergeAliases,expandCollab,analyze,nz,norm,nameVariants,cleanArtist};
+window.Core={KO,parseJSON,parseHTML,parseLooseDate,cleanArtists,mergeAliases,expandCollab,analyze,nz,norm,nameVariants,cleanArtist};
 })();
