@@ -80,11 +80,14 @@ function back(){
 }
 $('viewBack').addEventListener('click',back);
 // 수정: 닉네임·제목
+const dstr=t=>{ if(!t) return ''; const d=new Date(t+9*3600000); return d.toISOString().slice(0,10) };
+const dnum=(s,end)=>{ if(!s) return null; const t=Date.parse(s+(end?'T23:59:59+09:00':'T00:00:00+09:00')); return isFinite(t)?t:null };
 function editMap(p){
   const d=document.createElement('dialog'); d.className='mdlg';
   d.innerHTML=`<form class="pw-form" method="dialog"><h3>수정</h3>
     <label>닉네임<input name="nick" maxlength="20" required value="${esc(p.nickname)}"></label>
     <label>제목<input name="title" maxlength="40" required value="${esc(p.title)}"></label>
+    <div class="pw-dates"><label>기간 시작<input type="date" name="from" value="${dstr(p.data&&p.data.from)}"></label><label>기간 끝<input type="date" name="to" value="${dstr(p.data&&p.data.to)}"></label></div>
     <label>올릴 때 정한 비밀번호<input type="password" name="pw" required autocomplete="current-password"></label>
     <p class="err" hidden></p>
     <div class="pw-btns"><button type="button" class="btn ghost ed-cancel">취소</button><button class="btn ed-save">저장</button></div></form>`;
@@ -92,9 +95,11 @@ function editMap(p){
   const f=d.querySelector('form'), err=m=>{const e=d.querySelector('.err'); e.textContent=m; e.hidden=false};
   d.querySelector('.ed-cancel').onclick=()=>d.close();
   f.addEventListener('submit',async e=>{ e.preventDefault(); const el=f.elements, nick=el.nick.value.trim(), title=el.title.value.trim(), pw=el.pw.value; if(!nick||!title||!pw) return;
-    try{ const ok=await api('rpc/update_map',{method:'POST',body:JSON.stringify({p_id:p.id,p_password:pw,p_nickname:nick,p_title:title})});
+    const from=dnum(el.from.value), to=dnum(el.to.value,true); if(from&&to&&from>to) return err('시작일이 끝일보다 늦어요.');
+    try{ const ok=await api('rpc/update_map',{method:'POST',body:JSON.stringify({p_id:p.id,p_password:pw,p_nickname:nick,p_title:title,p_from:from,p_to:to})});
       if(!ok) return err('비밀번호가 맞지 않아요.');
-      p.nickname=nick; p.title=title; [items,allItems||[]].forEach(L=>L.forEach(x=>{ if(x.id===p.id){x.nickname=nick;x.title=title} }));
+      [p,...items,...(allItems||[])].forEach(x=>{ if(x.id===p.id){ x.nickname=nick; x.title=title; if(from&&to&&x.data){ x.data.from=from; x.data.to=to } } });
+      if(from&&to) view(p);
       $('viewWho').textContent=`${nick}님의 「${title}」을 보고 있어요`; renderFeed(); d.close();
     }catch(_){ err('저장하지 못했어요. 잠시 후 다시 시도해 주세요.') } });
   d.showModal();
@@ -142,6 +147,7 @@ function preview(a,g){
 }
 let query='', shown=[], allItems=null;
 const hay=p=>[p.title,p.nickname,...((p.data&&p.data.artists)||[]).map(a=>a[0])].join(' ').toLowerCase();
+const ym=t=>{ const d=new Date(t+9*3600000); return `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}` };
 function renderFeed(){
   const words=query.toLowerCase().split(/\s+/).filter(Boolean);
   shown=words.length?(allItems||items).filter(p=>{const h=hay(p); return words.every(w=>h.includes(w))}):items;
@@ -150,7 +156,7 @@ function renderFeed(){
     const plays=a.reduce((s,[,tr,r])=>s+(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0),0);
     return `<button type="button" class="mcard" data-i="${i}">${preview(a,genresFor(p))}<span class="mcard-t">${esc(p.title)}</span>
       <span class="mcard-a">${a.slice(0,6).map(x=>esc(x[0])).join(' · ')}</span>
-      <span class="mcard-m">${esc(p.nickname)} · ${a.length}팀 · ${plays.toLocaleString()}회 · ${fmtDate(p.created_at)}</span></button>` }).join('');
+      <span class="mcard-m">${esc(p.nickname)} · ${a.length}팀 · ${plays.toLocaleString()}회${p.data&&p.data.from?` · ${ym(p.data.from)}–${ym(p.data.to)}`:''}</span></button>` }).join('');
   $('mapFeedMore').hidden=!more||!!words.length;
   computeLazy();
 }

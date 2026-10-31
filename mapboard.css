@@ -37,3 +37,5 @@ body.viewing-shared #period,body.viewing-shared #scope,body.viewing-shared #howt
 .pw-btns{display:flex;justify-content:flex-end;gap:8px}
 .map-search{flex:1;min-width:180px;max-width:360px;font:inherit;font-size:13.5px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
 .map-search:focus{outline:2px solid var(--accent);outline-offset:0}
+.pw-dates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pw-form input[type=date]{color-scheme:light dark}
