@@ -280,6 +280,7 @@ async function build(){
   const ts=plays.map(p=>p.t).filter(isFinite);
   const f=t=>{const d=new Date(t);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}`};
   const plSrc=String(state.src).startsWith('pl:'), plName=plSrc?(state.src==='pl:*'?'모든 재생목록':(state.playlists[+state.src.slice(3)]||{}).name):'';
+  state.range=ts.length&&!plSrc?{from:Math.min(...ts),to:Math.max(...ts)}:null;
   state.metaBase=plSrc?`${plName} · ${tracks.length.toLocaleString()}곡`:ts.length?`${f(Math.min(...ts))} – ${f(Math.max(...ts))} · ${total.toLocaleString()}회 재생`:''; updateMeta();
   const queue=[]; let cov=0;
   for(const t of tracks){ if(queue.length>=400||(cov>=total*.85&&queue.length>=60)) break; queue.push(t); cov+=t.plays }
@@ -424,7 +425,7 @@ $('undoEdit').addEventListener('click',()=>{ state.removed.clear(); state.albums
 window.Topster={ready:()=>!!state.albums.length&&(state.mode==='manual'||!$('saveBtn').disabled),
   top:k=>state.albums.slice(0,k).map(a=>{const t=topTrack(a);return {al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,p:a.plays}}),
   snapshot:()=>({title:$('posterTitle').textContent.trim()||'나의 탑스터',period:state.mode==='manual'?'0':String(state.months),size:state.n,
-    albums:state.albums.slice(0,state.n*state.n).map((a,i)=>{const t=topTrack(a);const o={al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}; if(i===0&&state.mode==='auto'&&state.removed.size) o.ed=1; return o})})};
+    albums:state.albums.slice(0,state.n*state.n).map((a,i)=>{const t=topTrack(a);const o={al:a.album,ar:a.artist,c:a.cover||null,u:t?trackUrl(t):null,t:t?t.track:null,p:a.plays}; if(i===0&&state.mode==='auto'&&state.removed.size) o.ed=1; if(i===0&&state.mode==='auto'&&state.range){ o.pf=state.range.from; o.pt=state.range.to } return o})})};
 /* ---------- 이미지 저장 ---------- */
 function loadImg(src){return new Promise(r=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>r(im);im.onerror=()=>r(null);im.src=src})}
 function wrap(ctx,text,max){const out=[];let line='';for(const ch of String(text)){if(ctx.measureText(line+ch).width>max&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out}

@@ -23,6 +23,10 @@ const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[
 const safeLink=u=>{ if(typeof u!=='string'||!/^https:\/\/((www|m|music)\.youtube\.com|youtu\.be)\//i.test(u)) return null;
   const m=u.match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/); return m?'https://www.youtube.com/watch?v='+m[1]:u.replace('://music.youtube.com','://www.youtube.com') };
 const PERIOD={'6':'최근 6개월','12':'1년','0':'전체'};
+const ym=t=>{ const d=new Date(t+9*3600000); return `${d.getUTCFullYear()}.${String(d.getUTCMonth()+1).padStart(2,'0')}` };
+// 자동 탑스터의 실제 기간 (2026.04–2026.10), 예전 글은 '최근 6개월' 같은 이름으로
+const periodOf=p=>{ const a=Array.isArray(p.albums)?p.albums:[]; if(a.length&&a.every(x=>!(x.p>0))) return '직접 만든 탑스터';
+  const f=a[0]||{}; return (Number.isFinite(f.pf)?`${ym(f.pf)}–${ym(f.pt)}`:PERIOD[p.period]||'')+(f.ed?' · 자동 · 편집됨':' · 자동') };
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 const TM=()=>window.TierMaker;
 const kindBadge=k=>k==='cover'?'<span class="kind kind-cover">앨범 아트 기준</span>':k==='music'?'<span class="kind">곡 기준</span>':'';
@@ -69,7 +73,7 @@ function renderFeed(){
   $('feedEmpty').hidden=shown.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':words.length?'검색 결과가 없어요.':f.empty;
   $('feed').className='feed'+(tab==='tiers'?' feed-tiers':'');
   $('feed').innerHTML=shown.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
-    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
+    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${tab==='posts'?periodOf(p):fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
   $('feedMore').hidden=!f.more||!f.loaded||!!words.length;
 }
 let qT=null;
@@ -86,7 +90,7 @@ let cur=null, maker=null;
 function openPost(p){
   cur=p; maker=null;
   const n=Math.min(5,Math.max(3,p.size|0)), al=(Array.isArray(p.albums)?p.albums:[]).slice(0,n*n);
-  $('viewBody').innerHTML=`<div class="poster"><div class="poster-head"><h2>${esc(p.title)}</h2><span class="poster-meta">${esc(p.nickname)} · ${al.every(a=>!(a.p>0))?'직접 만든 탑스터':(PERIOD[p.period]||'')+(al[0]&&al[0].ed?' · 자동 · 편집됨':'')} · ${fmtDate(p.created_at)}</span></div>
+  $('viewBody').innerHTML=`<div class="poster"><div class="poster-head"><h2>${esc(p.title)}</h2><span class="poster-meta">${esc(p.nickname)} · ${periodOf(p)} · ${fmtDate(p.created_at)}</span></div>
     <div class="poster-body">${gridHTML(p,{links:true})}<ol class="list">${al.map((a,i)=>`<li class="${i>0&&i%n===0?'row-break':''}"><span><span class="al">${esc(a.al)}</span> <span class="ar">— ${esc(a.ar)}</span></span>${a.p>0?`<span class="cnt">${(a.p|0).toLocaleString()}</span>`:''}</li>`).join('')}</ol></div></div>
     <section class="comments">
       <div class="comments-h"><h3>티어표 <span class="hint" id="cCount"></span></h3><button type="button" class="btn primary" id="cMake">이 탑스터로 티어표 만들기</button></div>
@@ -152,7 +156,7 @@ function postTier(m,postId){
   openForm({type:'tier',maker:m,postId},{title:d.title,heading:postId?'티어표 댓글 달기':'티어표 게시판에 올리기',submit:postId?'댓글 달기':'올리기'});
 }
 $('postCancel').addEventListener('click',()=>$('postDlg').close());
-const cleanAlbums=list=>list.map(a=>{const o={al:String(a.al||'').slice(0,120),ar:String(a.ar||'').slice(0,80),c:safeCover(a.c),u:safeLink(a.u),t:a.t?String(a.t).slice(0,120):null,p:a.p|0}; if(a.ed) o.ed=1; return o});
+const cleanAlbums=list=>list.map(a=>{const o={al:String(a.al||'').slice(0,120),ar:String(a.ar||'').slice(0,80),c:safeCover(a.c),u:safeLink(a.u),t:a.t?String(a.t).slice(0,120):null,p:a.p|0}; if(a.ed) o.ed=1; if(Number.isFinite(a.pf)&&Number.isFinite(a.pt)){ o.pf=a.pf; o.pt=a.pt } return o});
 $('postForm').addEventListener('submit',async e=>{
   e.preventDefault(); if(!pending) return;
   const nick=$('pNick').value.trim(), title=$('pTitle').value.trim(), pw=$('pPw').value;
