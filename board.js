@@ -29,7 +29,7 @@ const periodOf=p=>{ const a=Array.isArray(p.albums)?p.albums:[]; if(a.length&&a.
   const f=a[0]||{}; return (Number.isFinite(f.pf)?`${ym(f.pf)}–${ym(f.pt)}`:PERIOD[p.period]||'')+(f.ed?' · 자동 · 편집됨':' · 자동') };
 const fmtDate=s=>{const d=new Date(s);return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`};
 const TM=()=>window.TierMaker;
-const kindBadge=k=>k==='cover'?'<span class="kind kind-cover">앨범 아트 기준</span>':k==='music'?'<span class="kind">곡 기준</span>':'';
+const kindBadge=()=>'';
 
 async function api(path,opt={}){
   const r=await fetch(SB+'/rest/v1/'+path,{...opt,headers:{...H,...(opt.headers||{})}});
