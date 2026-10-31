@@ -227,3 +227,7 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .edit-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px 14px;border:1.5px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--panel));font-size:14px}
 .edit-bar .sp{flex:1}
 .edit-bar[hidden]{display:none!important}
+.card-t{display:flex;align-items:center;gap:8px}
+.card-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ccount{flex:none;display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted);font-family:var(--mono)}
+.ccount svg{opacity:.8}

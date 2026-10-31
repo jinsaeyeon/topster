@@ -49,7 +49,7 @@ async function loadMore(kind=tab){
   const f=feeds[kind]; if(f.loading||!f.more) return; f.loading=true; $('feedMore').disabled=true;
   try{ const last=f.items[f.items.length-1];
     const d=await api(f.path(last?'&created_at=lt.'+encodeURIComponent(last.created_at):''));
-    f.items=f.items.concat(d); f.more=d.length===24;
+    f.items=f.items.concat(d); f.more=d.length===24; if(kind==='posts') countComments(d.map(x=>x.id));
   }catch(e){ f.error=true }
   f.loading=false; f.loaded=true; if(kind===tab) renderFeed();
 }
@@ -73,7 +73,7 @@ function renderFeed(){
   $('feedEmpty').hidden=shown.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':words.length?'검색 결과가 없어요.':f.empty;
   $('feed').className='feed'+(tab==='tiers'?' feed-tiers':'');
   $('feed').innerHTML=shown.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
-    <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${tab==='posts'?periodOf(p):fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
+    <span class="card-t"><span class="card-tt">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span>${tab==='posts'&&ccount.has(p.id)?`<span class="ccount" title="티어표 댓글">${BUBBLE}${ccount.get(p.id)}</span>`:''}</span><span class="card-m">${esc(p.nickname)} · ${tab==='posts'?periodOf(p):fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
   $('feedMore').hidden=!f.more||!f.loaded||!!words.length;
 }
 let qT=null;
@@ -109,10 +109,18 @@ function openPost(p){
   try{history.replaceState(null,'','#p='+p.id)}catch(_){}
   loadComments(p);
 }
+// 탑스터마다 달린 티어표 댓글 수
+const ccount=new Map();
+async function countComments(ids){
+  ids=ids.filter(Boolean); if(!ids.length) return;
+  try{ const rows=await api(`tierlists?select=post_id&post_id=in.(${ids.join(',')})&limit=2000`);
+    ids.forEach(id=>ccount.set(id,0)); rows.forEach(r=>ccount.set(r.post_id,(ccount.get(r.post_id)||0)+1)); if(tab==='posts') renderFeed() }catch(_){}
+}
+const BUBBLE='<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M2 3.5A2.5 2.5 0 0 1 4.5 1h7A2.5 2.5 0 0 1 14 3.5v5A2.5 2.5 0 0 1 11.5 11H7.3l-3 2.6c-.5.4-1.3.1-1.3-.6V11A2.5 2.5 0 0 1 2 8.5z"/></svg>';
 async function loadComments(p){
   let list=[]; try{ list=await api(`tierlists?select=${TCOLS}&post_id=eq.${p.id}&order=created_at.desc&limit=50`) }catch(_){ if(cur===p) $('cList').innerHTML='<p class="hint">티어표를 불러오지 못했어요.</p>'; return }
   if(cur!==p) return;
-  $('cCount').textContent=list.length?list.length+'개':'';
+  $('cCount').textContent=list.length?list.length+'개':''; ccount.set(p.id,list.length); renderFeed();
   $('cList').innerHTML=list.length?list.map((t,i)=>`<article class="comment"><div class="comment-h">${kindBadge(t.kind)}<b>${esc(t.nickname)}</b><span class="hint">${esc(t.title)} · ${fmtDate(t.created_at)}</span><button type="button" class="link-btn" data-edit="${i}">수정</button><button type="button" class="link-btn" data-del="${i}">삭제</button></div>${TM().renderStatic({...t,title:'',albums:p.albums})}</article>`).join(''):'<p class="hint">아직 달린 티어표가 없어요.</p>';
   $('cList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delItem('tier',list[+b.dataset.del]));
   $('cList').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editItem('tier',list[+b.dataset.edit]));
