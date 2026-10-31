@@ -119,17 +119,23 @@ function preview(a,g){
     return `<svg class="mprev" viewBox="-60 -60 120 120" aria-hidden="true">${circles.map((c,k)=>`<circle cx="${((c.x-enc.x)*s).toFixed(1)}" cy="${((c.y-enc.y)*s).toFixed(1)}" r="${(c.r*s*0.94).toFixed(1)}" fill="${M.gcol((g&&g[c.n])||M.genreOf(c.n))}" fill-opacity="${k<3?0.95:0.75}"/>`).join('')}</svg>`;
   }catch(_){ return '' }
 }
+let query='', shown=[], allItems=null;
+const hay=p=>[p.title,p.nickname,...((p.data&&p.data.artists)||[]).map(a=>a[0])].join(' ').toLowerCase();
 function renderFeed(){
-  $('mapFeedEmpty').hidden=items.length>0; if(!items.length) $('mapFeedEmpty').textContent='아직 올라온 생태계가 없어요.';
-  $('mapFeed').innerHTML=items.map((p,i)=>{ const a=(p.data&&Array.isArray(p.data.artists)?p.data.artists:[]);
+  const words=query.toLowerCase().split(/\s+/).filter(Boolean);
+  shown=words.length?(allItems||items).filter(p=>{const h=hay(p); return words.every(w=>h.includes(w))}):items;
+  $('mapFeedEmpty').hidden=shown.length>0; if(!shown.length) $('mapFeedEmpty').textContent=words.length?'검색 결과가 없어요.':'아직 올라온 생태계가 없어요.';
+  $('mapFeed').innerHTML=shown.map((p,i)=>{ const a=(p.data&&Array.isArray(p.data.artists)?p.data.artists:[]);
     const plays=a.reduce((s,[,tr,r])=>s+(Array.isArray(tr)?tr.reduce((x,y)=>x+(y[1]|0),0):0)+(Array.isArray(r)?r[1]|0:0),0);
     return `<button type="button" class="mcard" data-i="${i}">${preview(a,genresFor(p))}<span class="mcard-t">${esc(p.title)}</span>
       <span class="mcard-a">${a.slice(0,6).map(x=>esc(x[0])).join(' · ')}</span>
       <span class="mcard-m">${esc(p.nickname)} · ${a.length}팀 · ${plays.toLocaleString()}회 · ${fmtDate(p.created_at)}</span></button>` }).join('');
-  $('mapFeedMore').hidden=!more;
+  $('mapFeedMore').hidden=!more||!!words.length;
   computeLazy();
 }
-$('mapFeed').addEventListener('click',e=>{const b=e.target.closest('.mcard'); if(b) view(items[+b.dataset.i])});
+let qT=null;
+$('mapSearch').addEventListener('input',e=>{ clearTimeout(qT); qT=setTimeout(async()=>{ query=e.target.value.trim(); if(query&&!allItems){ try{ allItems=await api('maps?select=id,created_at,nickname,title,data&order=created_at.desc&limit=500') }catch(_){ allItems=items } } renderFeed() },250) });
+$('mapFeed').addEventListener('click',e=>{const b=e.target.closest('.mcard'); if(b) view(shown[+b.dataset.i])});
 $('mapFeedMore').addEventListener('click',loadMore);
 
 /* ---------- 올리기 ---------- */
@@ -146,7 +152,7 @@ $('mapPostForm').addEventListener('submit',async e=>{
   $('mpSubmit').disabled=true;
   try{ const id=await api('rpc/create_map',{method:'POST',body:JSON.stringify({p_nickname:nick,p_title:title,p_data:data,p_password:pw})});
     try{localStorage.setItem('topster-nick',nick)}catch(_){}
-    items.unshift({id,created_at:new Date().toISOString(),nickname:nick,title,data}); renderFeed();
+    allItems=null; items.unshift({id,created_at:new Date().toISOString(),nickname:nick,title,data}); renderFeed();
     $('mapPostDlg').close(); $('mpPw').value=''; $('mapBoard').scrollIntoView({behavior:'smooth'});
   }catch(e){ err(/rate/.test(e.message)?'짧은 시간에 너무 많이 올렸어요. 조금 뒤에 다시 올려 주세요.':'올리지 못했어요. 잠시 후 다시 시도해 주세요.') }
   $('mpSubmit').disabled=false;

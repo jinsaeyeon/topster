@@ -53,7 +53,21 @@ async function fromLink(q,my){
   results=[{al,ar,c}];
   $('mResults').innerHTML=`<button type="button" class="mres" data-r="0" title="${esc(al)} — ${esc(ar)}">${c?`<img src="${esc(c)}" alt="${esc(al)} — ${esc(ar)}">`:`<div class="ph"><b>${esc(al)}</b>${esc(ar)}</div>`}<b>${esc(al)}</b><span>${esc(ar)}</span></button>`;
 }
+// 같은 이름의 아티스트가 여러 명이면(예: 밴드 '아침' / 다른 '아침') 아티스트를 골라서 그 앨범만 볼 수 있게
+let all=[], pickedA=null;
+function showResults(list,src){
+  const groups=new Map();
+  (src||[]).forEach(r=>{ if(!r.aid) return; if(!groups.has(r.aid)) groups.set(r.aid,{name:r.aname,albums:[]}); const g=groups.get(r.aid); if(!g.albums.some(x=>x.al===r.al)) g.albums.push(r) });
+  const chips=[...groups].filter(([,g])=>g.albums.length).slice(0,6);
+  const chipHTML=chips.length>1?`<div class="mchips"><span class="hint">아티스트</span>${chips.map(([id,g])=>`<button type="button" class="mchip${pickedA===id?' on':''}" data-aid="${esc(id)}">${g.albums[0].c?`<img src="${esc(g.albums[0].c)}" alt="">`:''}<b>${esc(g.name)}</b><span>${esc(g.albums[0].al)}${g.albums.length>1?` 외 ${g.albums.length-1}장`:''}</span></button>`).join('')}</div>`:'';
+  if(pickedA&&groups.has(pickedA)) list=groups.get(pickedA).albums;
+  results=list;
+  $('mResults').innerHTML=chipHTML+(list.length?list.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="${esc(r.al)} — ${esc(r.ar)}" loading="lazy">`:`<div class="ph"><b>${esc(r.al)}</b>${esc(r.ar)}</div>`}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>');
+  lastSrc=src;
+}
+let lastSrc=null;
 async function search(q){
+  pickedA=null;
   const my=++seq;
   if(/(?:youtube\.com|youtu\.be)\//i.test(q)){ $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>'; return fromLink(q,my) } $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>';
   const words=q.split(/\s+/).filter(Boolean);
@@ -69,7 +83,7 @@ async function search(q){
     artistLists.forEach((list,k)=>list.forEach(a=>{ if(seenA.has(a.id)) return; const qn=norm(artistQs[k]);
       const alias=(window.Core&&Core.nameVariants?[artistQs[k],...Core.nameVariants(artistQs[k])]:[artistQs[k]]).map(norm);
       if(a.nb_fan>50||alias.some(x=>x&&norm(a.name).includes(x))||norm(a.name)===qn){ seenA.add(a.id); arts.push(a) } }));
-    const albumLists=await Promise.all(arts.slice(0,4).map(a=>A.jsonp(`https://api.deezer.com/artist/${a.id}/albums?limit=60&output=jsonp`).then(d=>(d&&d.data||[]).map(x=>dzAlbum({...x,artist:a}))).catch(()=>[])));
+    const albumLists=await Promise.all(arts.slice(0,4).map(a=>A.jsonp(`https://api.deezer.com/artist/${a.id}/albums?limit=60&output=jsonp`).then(d=>(d&&d.data||[]).map(x=>({...dzAlbum({...x,artist:a}),aid:'dz'+a.id,aname:a.name}))).catch(()=>[])));
     if(my!==seq) return;
     const rest=words.length>1?norm(words[words.length-1]):'';
     let byArtist=albumLists.flat();
@@ -77,7 +91,7 @@ async function search(q){
     out=out.concat(byArtist);
   }
   // iTunes: 아티스트를 찾아 그 아티스트의 앨범 전체를 가져와요 (Deezer에 없는 한국 앨범이 여기 있는 경우가 많아요: 킁, 12 …)
-  const itA=x=>({al:x.collectionName,ar:x.artistName,c:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.')});
+  const itA=x=>({aid:x.wrapperType==='collection'&&x.artistId?'it'+x.artistId:undefined,aname:x.artistName,al:x.collectionName,ar:x.artistName,c:x.artworkUrl100&&x.artworkUrl100.replace(/\/\d+x\d+bb\./,'/600x600bb.')});
   const cc=hasKana(q)?'JP':'US';
   try{
     const [albums,...arts]=await Promise.all([itunes(`search?entity=album&limit=24&country=${cc}&term=`+encodeURIComponent(q)),
@@ -103,11 +117,12 @@ async function search(q){
   const scored=out.map((r,i)=>({r,i,s:(exact(r)?10:0)+(exact(r)&&!/feat\.|\(with /i.test(r.al)?1:0)}));
   scored.sort((a,b)=>b.s-a.s||a.i-b.i); out=scored.map(x=>x.r);
   const seen=new Set(); results=out.filter(r=>{const k=r.id||(r.al+'|'+r.ar).toLowerCase(); const k2=(r.al+'|'+r.ar).toLowerCase(); if(!r.al||seen.has(k)||seen.has(k2)) return false; seen.add(k); seen.add(k2); return true}).slice(0,60);
-  $('mResults').innerHTML=results.length?results.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="${esc(r.al)} — ${esc(r.ar)}" loading="lazy">`:`<div class="ph"><b>${esc(r.al)}</b>${esc(r.ar)}</div>`}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>';
+  all=results; showResults(results, out);
 }
 $('mQuery').addEventListener('input',e=>{ clearTimeout(tmr); const q=e.target.value.trim(); if(!q){$('mResults').innerHTML='';seq++;return} tmr=setTimeout(()=>search(q),650) });
 $('mQuery').addEventListener('keydown',e=>{ if(e.key==='Enter'){ clearTimeout(tmr); const q=e.target.value.trim(); if(q) search(q) } });
 $('mResults').addEventListener('click',e=>{
+  const ch=e.target.closest('.mchip'); if(ch){ pickedA=pickedA===ch.dataset.aid?null:ch.dataset.aid; showResults(all,lastSrc); return }
   const b=e.target.closest('.mres'); if(!b) return; const r=results[+b.dataset.r]; if(b.dataset.broken) r.c=null;
   const n=state.n*state.n;
   if(state.albums.length>=n){ alert('25칸이 가득 찼어요. 앨범을 하나 빼고 넣어 주세요.'); return }

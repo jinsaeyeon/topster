@@ -58,19 +58,27 @@ function gridHTML(p,{links}){
     const info=`<span class="info"><b>${esc(a.al)}</b><span>${esc(a.ar)}</span>${a.p>0?`<em>${(a.p|0).toLocaleString()}회 재생</em>`:''}</span>`;
     return u?`<a class="tile" href="${esc(u)}" target="_blank" rel="noopener" aria-label="${esc(a.al)} — ${esc(a.ar)}">${inner}<span class="rank">${i+1}</span>${info}</a>`:`<div class="tile" tabindex="0">${inner}${info}</div>`}).join('')+'</div>';
 }
+// 검색: 제목·닉네임·앨범·아티스트 이름에서 찾아요 (검색할 땐 전체 글을 한 번 불러와요)
+let query='', shown=[];
+const hay=p=>[p.title,p.nickname,...(Array.isArray(p.albums)?p.albums.flatMap(a=>[a.al,a.ar]):[])].join(' ').toLowerCase();
+async function ensureAll(kind){ const f=feeds[kind]; if(f.all) return; try{ f.all=await api(f.path('').replace('limit=24','limit=1000')) }catch(_){ f.all=f.items } }
 function renderFeed(){
   const f=feeds[tab];
-  $('feedEmpty').hidden=f.items.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':f.empty;
+  const words=query.toLowerCase().split(/\s+/).filter(Boolean);
+  shown=words.length?(f.all||f.items).filter(p=>{const h=hay(p); return words.every(w=>h.includes(w))}):f.items;
+  $('feedEmpty').hidden=shown.length>0||!f.loaded; $('feedEmpty').textContent=f.error?'게시판을 불러오지 못했어요.':words.length?'검색 결과가 없어요.':f.empty;
   $('feed').className='feed'+(tab==='tiers'?' feed-tiers':'');
-  $('feed').innerHTML=f.items.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
+  $('feed').innerHTML=shown.map((p,i)=>`<button type="button" class="card" data-i="${i}">${tab==='posts'?gridHTML(p,{links:false}):TM().renderStatic(p,{small:true})}
     <span class="card-t">${tab==='tiers'?kindBadge(p.kind):''}${esc(p.title)}</span><span class="card-m">${esc(p.nickname)} · ${fmtDate(p.created_at)}${tab==='tiers'&&p.post_id?' · 탑스터 댓글':''}</span></button>`).join('');
-  $('feedMore').hidden=!f.more||!f.loaded;
+  $('feedMore').hidden=!f.more||!f.loaded||!!words.length;
 }
+let qT=null;
+$('feedSearch').addEventListener('input',e=>{ clearTimeout(qT); qT=setTimeout(async()=>{ query=e.target.value.trim(); if(query) await ensureAll(tab); renderFeed() },250) });
 document.querySelectorAll('#feedTabs button').forEach(b=>b.addEventListener('click',()=>{
   tab=b.dataset.f; document.querySelectorAll('#feedTabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));
-  renderFeed(); if(!feeds[tab].loaded) loadMore();
+  (async()=>{ if(query) await ensureAll(tab); renderFeed(); if(!feeds[tab].loaded) loadMore() })();
 }));
-$('feed').addEventListener('click',e=>{const b=e.target.closest('.card'); if(!b) return; const it=feeds[tab].items[+b.dataset.i]; tab==='posts'?openPost(it):openTier(it)});
+$('feed').addEventListener('click',e=>{const b=e.target.closest('.card'); if(!b) return; const it=shown[+b.dataset.i]; tab==='posts'?openPost(it):openTier(it)});
 $('feedMore').addEventListener('click',()=>loadMore());
 
 /* ---------- 탑스터 보기 + 티어표 댓글 ---------- */
@@ -155,13 +163,13 @@ $('postForm').addEventListener('submit',async e=>{
     if(pending.type==='post'){
       const s=Topster.snapshot(), albums=cleanAlbums(s.albums);
       const id=await api('rpc/create_post',{method:'POST',body:JSON.stringify({p_nickname:nick,p_title:title,p_period:s.period,p_size:s.size,p_albums:albums,p_password:pw})});
-      feeds.posts.items.unshift({id,created_at:new Date().toISOString(),nickname:nick,title,period:s.period,size:s.size,albums});
+      feeds.posts.all=null; feeds.posts.items.unshift({id,created_at:new Date().toISOString(),nickname:nick,title,period:s.period,size:s.size,albums});
       showTab('posts');
     } else {
       const {maker:m,postId}=pending, d=m.data(), albums=cleanAlbums(m.albums);
       const tiers=d.tiers.map(r=>({l:r.l||'?',c:TM().safeColor(r.c),i:r.i}));
       const id=await api('rpc/create_tier',{method:'POST',body:JSON.stringify({p_post_id:postId,p_kind:d.kind,p_nickname:nick,p_title:title,p_tiers:tiers,p_albums:albums,p_password:pw})});
-      feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:postId,kind:d.kind,nickname:nick,title,tiers,albums});
+      feeds.tiers.all=null; feeds.tiers.items.unshift({id,created_at:new Date().toISOString(),post_id:postId,kind:d.kind,nickname:nick,title,tiers,albums});
       if(postId){ if(cur&&cur.id===postId){ $('cCancel').click(); loadComments(cur) } if(tab==='tiers') renderFeed() }
       else showTab('tiers');
     }

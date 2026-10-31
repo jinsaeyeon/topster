@@ -216,3 +216,11 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .undo-edit{font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid #3a3742;background:#1c1b20;color:#f4f2ee;cursor:pointer}
 .undo-edit:hover{border-color:var(--accent);color:var(--accent)}
 .src-sel{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg);max-width:240px}
+.mresults .mchips{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mchip{all:unset;cursor:pointer;display:grid;grid-template-columns:36px auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;padding:5px 10px 5px 5px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:12px;max-width:240px}
+.mchip img{grid-row:1/3;width:36px;height:36px;object-fit:cover;border-radius:6px}
+.mchip b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mchip span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mchip.on,.mchip:hover{border-color:var(--accent)}
+.feed-search{flex:1;min-width:180px;max-width:360px;margin-left:auto;font:inherit;font-size:13.5px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg)}
+.feed-search:focus{outline:2px solid var(--accent);outline-offset:0}
