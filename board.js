@@ -1,10 +1,10 @@
 (function(){
 'use strict';
 // 비밀번호 입력창: 브라우저 기본 prompt는 글자가 그대로 보여서, 가려지는 입력칸으로 직접 띄워요
-function askPassword(cls){
+function askPassword(cls,label='삭제'){
   return new Promise(res=>{
     const d=document.createElement('dialog'); d.className=cls;
-    d.innerHTML='<form method="dialog" class="pw-form"><h3>삭제</h3><label>올릴 때 정한 비밀번호<input type="password" name="pw" autocomplete="current-password" required minlength="1"></label><div class="pw-btns"><button type="button" class="btn ghost pw-cancel">취소</button><button class="btn pw-ok" value="ok">삭제</button></div></form>';
+    d.innerHTML='<form method="dialog" class="pw-form"><h3>'+label+'</h3><label>올릴 때 정한 비밀번호<input type="password" name="pw" autocomplete="current-password" required minlength="1"></label><div class="pw-btns"><button type="button" class="btn ghost pw-cancel">취소</button><button class="btn pw-ok" value="ok">'+label+'</button></div></form>';
     document.body.appendChild(d);
     const inp=d.querySelector('input'); let out=null;
     d.querySelector('.pw-cancel').onclick=()=>d.close();
@@ -94,7 +94,7 @@ function openPost(p){
       <div class="dlg-btns" id="cMakerBtns" hidden><button type="button" class="btn" id="cCancel">취소</button><button type="button" class="btn" id="cReset">처음으로</button><button type="button" class="btn primary" id="cPost">댓글 달기</button></div>
       <div id="cList"><p class="hint">불러오는 중…</p></div>
     </section>`;
-  $('viewDel').onclick=()=>delItem('post',p);
+  $('viewDel').onclick=()=>delItem('post',p); $('viewEdit').onclick=()=>editItem('post',p);
   $('cMake').onclick=()=>{ maker=TM().create($('cMaker'),al,{title:p.title+' 티어표'}); $('cMaker').hidden=false; $('cMakerBtns').hidden=false; $('cMake').hidden=true; $('cMaker').scrollIntoView({behavior:'smooth',block:'start'}) };
   $('cCancel').onclick=()=>{ maker=null; $('cMaker').hidden=true; $('cMaker').innerHTML=''; $('cMakerBtns').hidden=true; $('cMake').hidden=false };
   $('cReset').onclick=()=>{ if(maker){ maker.reset(); $('cPost').classList.remove('hl') } };
@@ -109,13 +109,14 @@ async function loadComments(p){
   let list=[]; try{ list=await api(`tierlists?select=${TCOLS}&post_id=eq.${p.id}&order=created_at.desc&limit=50`) }catch(_){ if(cur===p) $('cList').innerHTML='<p class="hint">티어표를 불러오지 못했어요.</p>'; return }
   if(cur!==p) return;
   $('cCount').textContent=list.length?list.length+'개':'';
-  $('cList').innerHTML=list.length?list.map((t,i)=>`<article class="comment"><div class="comment-h">${kindBadge(t.kind)}<b>${esc(t.nickname)}</b><span class="hint">${esc(t.title)} · ${fmtDate(t.created_at)}</span><button type="button" class="link-btn" data-del="${i}">삭제</button></div>${TM().renderStatic({...t,title:'',albums:p.albums})}</article>`).join(''):'<p class="hint">아직 달린 티어표가 없어요.</p>';
+  $('cList').innerHTML=list.length?list.map((t,i)=>`<article class="comment"><div class="comment-h">${kindBadge(t.kind)}<b>${esc(t.nickname)}</b><span class="hint">${esc(t.title)} · ${fmtDate(t.created_at)}</span><button type="button" class="link-btn" data-edit="${i}">수정</button><button type="button" class="link-btn" data-del="${i}">삭제</button></div>${TM().renderStatic({...t,title:'',albums:p.albums})}</article>`).join(''):'<p class="hint">아직 달린 티어표가 없어요.</p>';
   $('cList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delItem('tier',list[+b.dataset.del]));
+  $('cList').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editItem('tier',list[+b.dataset.edit]));
 }
 function openTier(t){
   cur=null; maker=null;
   $('viewBody').innerHTML=`<div class="poster-head"><h2>${kindBadge(t.kind)}${esc(t.title)}</h2><span class="poster-meta">${esc(t.nickname)} · ${fmtDate(t.created_at)}</span></div>${TM().renderStatic({...t,title:''})}${t.post_id?'<div class="origin"><button type="button" class="btn" id="tOrigin">이 티어표를 단 탑스터 보기</button></div>':''}`;
-  $('viewDel').onclick=()=>delItem('tier',t);
+  $('viewDel').onclick=()=>delItem('tier',t); $('viewEdit').onclick=()=>editItem('tier',t);
   if(t.post_id) $('tOrigin').onclick=async()=>{ try{ const p=feeds.posts.items.find(x=>x.id===t.post_id)||(await api(`posts?select=${PCOLS}&id=eq.${t.post_id}`))[0]; if(p) openPost(p); else alert('원래 탑스터가 지워졌어요.') }catch(_){ alert('불러오지 못했어요.') } };
   $('viewDlg').showModal();
   try{history.replaceState(null,'','#t='+t.id)}catch(_){}
@@ -185,7 +186,40 @@ function showTab(k){ const b=document.querySelector(`#feedTabs button[data-f="${
   const outside=e=>{const r=d.getBoundingClientRect(); return e.target===d&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)};
   d.addEventListener('pointerdown',e=>{downOut=outside(e)});
   d.addEventListener('click',e=>{ if(downOut&&outside(e)) d.close(); downOut=false }); });
-window.Board={postTier};
+/* ---------- 수정: 이름(닉네임·제목), 직접 만든 탑스터는 구성까지 ---------- */
+const isManualPost=p=>Array.isArray(p.albums)&&p.albums.length&&p.albums.every(a=>!(a.p>0));
+function editItem(kind,it){
+  const d=document.createElement('dialog'); d.className='dlg';
+  const manual=kind==='post'&&isManualPost(it);
+  d.innerHTML=`<form class="pw-form" method="dialog"><h3>수정</h3>
+    <label>닉네임<input name="nick" maxlength="20" required value="${esc(it.nickname)}"></label>
+    <label>제목<input name="title" maxlength="40" required value="${esc(it.title)}"></label>
+    <label>올릴 때 정한 비밀번호<input type="password" name="pw" required autocomplete="current-password"></label>
+    <p class="err" hidden></p>
+    <div class="pw-btns">${manual?'<button type="button" class="btn ed-compose">탑스터 구성 수정</button>':''}<button type="button" class="btn ed-cancel">취소</button><button class="btn primary ed-save">저장</button></div></form>`;
+  document.body.appendChild(d); d.addEventListener('close',()=>d.remove());
+  const f=d.querySelector('form'), err=m=>{const e=d.querySelector('.err'); e.textContent=m; e.hidden=false};
+  d.querySelector('.ed-cancel').onclick=()=>d.close();
+  if(manual) d.querySelector('.ed-compose').onclick=()=>{ d.close(); $('viewDlg').close(); window.ManualEdit&&ManualEdit.start(it) };
+  f.addEventListener('submit',async e=>{ e.preventDefault();
+    const el=f.elements, nick=el.nick.value.trim(), title=el.title.value.trim(), pw=el.pw.value; if(!nick||!title||!pw) return;
+    try{ const fn=kind==='post'?'update_post':'update_tier';
+      const ok=await api('rpc/'+fn,{method:'POST',body:JSON.stringify({p_id:it.id,p_password:pw,p_nickname:nick,p_title:title})});
+      if(!ok) return err('비밀번호가 맞지 않아요.');
+      it.nickname=nick; it.title=title; d.close(); renderFeed();
+      if(kind==='post') openPost(it); else if(it.post_id&&cur) loadComments(cur); else openTier(it);
+    }catch(_){ err('저장하지 못했어요. 잠시 후 다시 시도해 주세요.') } });
+  d.showModal();
+}
+// 직접 만들기 화면에서 고친 구성을 게시물에 저장
+async function saveCompose(post,albums){
+  const pw=await askPassword('dlg','저장'); if(!pw) return false;
+  try{ const ok=await api('rpc/update_post',{method:'POST',body:JSON.stringify({p_id:post.id,p_password:pw,p_nickname:post.nickname,p_title:post.title,p_albums:cleanAlbums(albums).map(a=>({...a,p:0}))})});
+    if(!ok){ alert('비밀번호가 맞지 않아요.'); return false }
+    post.albums=cleanAlbums(albums).map(a=>({...a,p:0})); renderFeed(); return true;
+  }catch(_){ alert('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'); return false }
+}
+window.Board={postTier,saveCompose,openPost:p=>openPost(p)};
 
 loadMore('posts').then(async()=>{
   const m=location.hash.match(/^#([pt])=([0-9a-f-]{36})$/i); if(!m) return;

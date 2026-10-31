@@ -224,3 +224,6 @@ h1{font-size:clamp(30px,5vw,46px);font-weight:900;letter-spacing:-.02em;margin:0
 .mchip.on,.mchip:hover{border-color:var(--accent)}
 .feed-search{flex:1;min-width:180px;max-width:360px;margin-left:auto;font:inherit;font-size:13.5px;padding:8px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg)}
 .feed-search:focus{outline:2px solid var(--accent);outline-offset:0}
+.edit-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px 14px;border:1.5px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 8%,var(--panel));font-size:14px}
+.edit-bar .sp{flex:1}
+.edit-bar[hidden]{display:none!important}

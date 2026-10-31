@@ -7,14 +7,15 @@ const KEY='topster-manual';
 const ytSearch=(a,t)=>'https://www.youtube.com/results?search_query='+encodeURIComponent(a+' '+t);
 const mk=(album,artist,cover)=>({album,artist,cover,plays:0,tracks:[{artist,track:album,plays:0,url:ytSearch(artist,album)}]});
 document.addEventListener('topster:cover',()=>{ if(state.mode==='manual') persist() });
-function persist(){ try{localStorage.setItem(KEY,JSON.stringify(state.albums.map(a=>({al:a.album,ar:a.artist,c:a.cover||null}))))}catch(_){} }
+function persist(){ if(editing) return; try{localStorage.setItem(KEY,JSON.stringify(state.albums.map(a=>({al:a.album,ar:a.artist,c:a.cover||null}))))}catch(_){} }
 function changed(){ A.render(false); persist();
   document.dispatchEvent(new Event(state.albums.length?'topster:done':'topster:start')) }
 
 /* ---------- 들어가기 / 나가기 ---------- */
-function enter(){
+let editing=null;
+function enter(preset){
   state.run++; state.mode='manual';
-  let saved=[]; try{saved=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){}
+  let saved=[]; if(preset) saved=preset; else try{saved=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){}
   state.albums=Array.isArray(saved)?saved.filter(x=>x&&x.al).map(x=>mk(String(x.al),String(x.ar||''),x.c||null)):[];
   $('howto').hidden=true; $('err').hidden=true; $('board').hidden=false; $('detail').hidden=true;
   $('vidBtn').hidden=true; $('undoEdit').hidden=true; $('addRec').hidden=true; $('period').hidden=true; $('autoNote').hidden=true; $('mPanel').hidden=false;
@@ -22,7 +23,20 @@ function enter(){
   if($('posterTitle').textContent.trim()==='') $('posterTitle').textContent='나의 탑스터';
   changed(); $('mQuery').focus();
 }
-$('manualBtn').addEventListener('click',enter);
+$('manualBtn').addEventListener('click',()=>{ stopEdit(); enter() });
+// 게시판에 올린 직접 만든 탑스터의 구성 고치기
+function stopEdit(){ editing=null; const b=$('editBar'); if(b) b.hidden=true }
+window.ManualEdit={start(post){
+  editing=post; enter(post.albums.map(a=>({al:a.al,ar:a.ar,c:a.c})));
+  $('posterTitle').textContent=post.title; $('editBar').hidden=false; $('editWho').textContent=`「${post.title}」 구성 수정 중`;
+  $('board').scrollIntoView({behavior:'smooth'});
+}};
+$('editSave').addEventListener('click',async()=>{
+  if(!editing||!window.Board) return; if(!state.albums.length){ alert('앨범을 한 개 이상 넣어 주세요.'); return }
+  const post=editing, ok=await Board.saveCompose(post,Topster.snapshot().albums);
+  if(ok){ stopEdit(); enter(); Board.openPost(post) }
+});
+$('editCancel').addEventListener('click',()=>{ stopEdit(); enter() });
 document.addEventListener('topster:auto',()=>{ $('period').hidden=false; $('autoNote').hidden=false; $('mPanel').hidden=true });
 
 /* ---------- 앨범 검색 (Deezer 우선, 일본어·결과 없음이면 iTunes) ---------- */

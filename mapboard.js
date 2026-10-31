@@ -65,6 +65,7 @@ function view(p){
   $('viewBanner').hidden=false; $('viewWho').textContent=`${p.nickname}님의 「${p.title}」을 보고 있어요`;
   $('addBtn').hidden=true; $('aiBtn').hidden=true; $('mapPost').hidden=true;
   $('viewDel').onclick=()=>del(p);
+  $('viewEdit').onclick=()=>editMap(p);
   try{history.replaceState(null,'','#m='+p.id)}catch(_){}
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -78,6 +79,26 @@ function back(){
   try{history.replaceState(null,'',location.pathname)}catch(_){}
 }
 $('viewBack').addEventListener('click',back);
+// 수정: 닉네임·제목
+function editMap(p){
+  const d=document.createElement('dialog'); d.className='mdlg';
+  d.innerHTML=`<form class="pw-form" method="dialog"><h3>수정</h3>
+    <label>닉네임<input name="nick" maxlength="20" required value="${esc(p.nickname)}"></label>
+    <label>제목<input name="title" maxlength="40" required value="${esc(p.title)}"></label>
+    <label>올릴 때 정한 비밀번호<input type="password" name="pw" required autocomplete="current-password"></label>
+    <p class="err" hidden></p>
+    <div class="pw-btns"><button type="button" class="btn ghost ed-cancel">취소</button><button class="btn ed-save">저장</button></div></form>`;
+  document.body.appendChild(d); d.addEventListener('close',()=>d.remove());
+  const f=d.querySelector('form'), err=m=>{const e=d.querySelector('.err'); e.textContent=m; e.hidden=false};
+  d.querySelector('.ed-cancel').onclick=()=>d.close();
+  f.addEventListener('submit',async e=>{ e.preventDefault(); const el=f.elements, nick=el.nick.value.trim(), title=el.title.value.trim(), pw=el.pw.value; if(!nick||!title||!pw) return;
+    try{ const ok=await api('rpc/update_map',{method:'POST',body:JSON.stringify({p_id:p.id,p_password:pw,p_nickname:nick,p_title:title})});
+      if(!ok) return err('비밀번호가 맞지 않아요.');
+      p.nickname=nick; p.title=title; [items,allItems||[]].forEach(L=>L.forEach(x=>{ if(x.id===p.id){x.nickname=nick;x.title=title} }));
+      $('viewWho').textContent=`${nick}님의 「${title}」을 보고 있어요`; renderFeed(); d.close();
+    }catch(_){ err('저장하지 못했어요. 잠시 후 다시 시도해 주세요.') } });
+  d.showModal();
+}
 async function del(p){
   const pw=await askPassword('mdlg'); if(!pw) return;
   try{ const ok=await api('rpc/delete_map',{method:'POST',body:JSON.stringify({p_id:p.id,p_password:pw})});
