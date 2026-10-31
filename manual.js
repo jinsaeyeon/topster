@@ -37,8 +37,25 @@ const itunes=path=>{ if(!itCache.has(path)) itCache.set(path,A.jsonp('https://it
 const RI='g kk n d tt r m b pp s ss  j jj ch k t p h'.split(' '), RM='a ae ya yae eo e yeo ye o wa wae oe yo u wo we wi yu eu ui i'.split(' '), RF=' k k ks n nj nh t l lk lm lb ls lt lp lh m p ps t t ng t t k t p t'.split(' ');
 const roman=s=>String(s).replace(/[\uac00-\ud7a3]/g,ch=>{const c=ch.charCodeAt(0)-0xac00; return RI[Math.floor(c/588)]+RM[Math.floor(c%588/28)]+RF[c%28]});
 const norm=s=>String(s||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'');
+// YouTube·YouTube Music 앨범/영상 링크를 붙여넣으면 그 제목과 썸네일(앨범 아트)로 칸을 만들어요
+const ytIdOf=u=>{const m=String(u).match(/(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11})/); return m?m[1]:null};
+const imgOK=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>200);i.onerror=()=>r(false);i.src=src;setTimeout(()=>r(false),8000)});
+async function fromLink(q,my){
+  let u=q.trim().replace('://music.youtube.com','://www.youtube.com');
+  let d=null; try{ const r=await fetch('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(u)); if(r.ok) d=await r.json() }catch(_){}
+  if(my!==seq) return;
+  if(!d){ $('mResults').innerHTML='<p class="hint">이 링크의 정보를 가져오지 못했어요. 공개된 앨범이나 영상 링크인지 확인해 주세요.</p>'; return }
+  const id=ytIdOf(d.thumbnail_url||'')||ytIdOf(u);
+  let c=null; if(id) for(const s of ['maxresdefault','hq720','sddefault','hqdefault','mqdefault']){ const t=`https://i.ytimg.com/vi/${id}/${s}.jpg`; if(await imgOK(t)){ c=t; break } }
+  if(my!==seq) return;
+  const al=String(d.title||'').replace(/^(?:album|앨범)\s*[-–:]\s*/i,'').replace(/\s*[\(\[](?:official|full album|lyric|audio|mv|m\/v)[^\)\]]*[\)\]]/gi,'').trim();
+  const ar=String(d.author_name||'').replace(/\s*-\s*topic$/i,'').trim();
+  results=[{al,ar,c}];
+  $('mResults').innerHTML=`<button type="button" class="mres" data-r="0" title="${esc(al)} — ${esc(ar)}">${c?`<img src="${esc(c)}" alt="${esc(al)} — ${esc(ar)}">`:`<div class="ph"><b>${esc(al)}</b>${esc(ar)}</div>`}<b>${esc(al)}</b><span>${esc(ar)}</span></button>`;
+}
 async function search(q){
-  const my=++seq; $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>';
+  const my=++seq;
+  if(/(?:youtube\.com|youtu\.be)\//i.test(q)){ $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>'; return fromLink(q,my) } $('mResults').innerHTML='<p class="hint">찾는 중<span class="dots" aria-hidden="true"></span></p>';
   const words=q.split(/\s+/).filter(Boolean);
   // "씨잼 킁"처럼 아티스트 + 앨범으로 쓴 경우: 앞부분을 아티스트로도 찾아봐요
   const artistQs=[...new Set([q,...(words.length>1?[words.slice(0,-1).join(' '),words[0]]:[])])];
@@ -80,6 +97,11 @@ async function search(q){
     out=rest?byArtist.filter(hasRest).concat(out,itAlbums,byArtist):out.concat(itAlbums,byArtist);
   }catch(_){}
   if(my!==seq) return;
+  // 검색어가 아티스트 이름과 정확히 같으면(아침, 혁오 …) 그 아티스트의 앨범을 맨 앞에
+  const nameQs=new Set([q,...artistQs].map(norm).concat([q,...artistQs].map(x=>norm(roman(x)))).filter(Boolean));
+  const exact=r=>nameQs.has(norm(r.ar))||String(r.ar||'').split(/\s*[,&]\s*/).some(x=>nameQs.has(norm(x)));
+  const scored=out.map((r,i)=>({r,i,s:(exact(r)?10:0)+(exact(r)&&!/feat\.|\(with /i.test(r.al)?1:0)}));
+  scored.sort((a,b)=>b.s-a.s||a.i-b.i); out=scored.map(x=>x.r);
   const seen=new Set(); results=out.filter(r=>{const k=r.id||(r.al+'|'+r.ar).toLowerCase(); const k2=(r.al+'|'+r.ar).toLowerCase(); if(!r.al||seen.has(k)||seen.has(k2)) return false; seen.add(k); seen.add(k2); return true}).slice(0,60);
   $('mResults').innerHTML=results.length?results.map((r,i)=>`<button type="button" class="mres" data-r="${i}" title="${esc(r.al)} — ${esc(r.ar)}">${r.c?`<img src="${esc(r.c)}" alt="${esc(r.al)} — ${esc(r.ar)}" loading="lazy">`:`<div class="ph"><b>${esc(r.al)}</b>${esc(r.ar)}</div>`}<b>${esc(r.al)}</b><span>${esc(r.ar)}</span></button>`).join(''):'<p class="hint">검색 결과가 없어요.</p>';
 }

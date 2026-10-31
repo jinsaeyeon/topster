@@ -1,10 +1,12 @@
 (function(){
 'use strict';
+// 16:9 썸네일도 찌그러지지 않게 가운데를 정사각형으로 잘라 그려요
+const drawSq=(x,im,dx,dy,s)=>{ const w=im.naturalWidth||im.width, hh=im.naturalHeight||im.height, m=Math.min(w,hh); x.drawImage(im,(w-m)/2,(hh-m)/2,m,m,dx,dy,s,s) };
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TIERS=[['SS','#ff7f7f'],['S','#ffbf7f'],['A+','#ffdf7f'],['A','#ffff7f'],['B','#bfff7f'],['C','#7fff7f']];
 const safeColor=c=>/^#[0-9a-f]{6}$/i.test(c||'')?c:'#9a97a3';
-const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\/|^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/mqdefault\.jpg$/i.test(u)?u:null;
+const safeCover=u=>typeof u==='string'&&/^https:\/\/([a-z0-9-]+\.mzstatic\.com|[a-z0-9-]+\.dzcdn\.net)\/|^https:\/\/i\.ytimg\.com\/vi\/[\w-]{11}\/(?:mqdefault|hqdefault|sddefault|maxresdefault|hq720)\.jpg$/i.test(u)?u:null;
 
 function itemHTML(a,i){
   const c=safeCover(a.c);
@@ -93,7 +95,7 @@ async function saveImage(d,albums){
     let fs=30; x.font=`900 ${fs}px "Noto Sans KR",sans-serif`; while(x.measureText(r.l).width>lab-12&&fs>12){fs-=2;x.font=`900 ${fs}px "Noto Sans KR",sans-serif`}
     x.fillText(r.l,pad+lab/2,y+(cell-2)/2); x.textAlign='left'; x.textBaseline='top';
     r.i.forEach((id,k)=>{ const cx=pad+lab+k*cell, a=albums[id]; if(!a) return;
-      if(imgs[id]) x.drawImage(imgs[id],cx,y,cell-2,cell-2);
+      if(imgs[id]) drawSq(x,imgs[id],cx,y,cell-2);
       else{ x.fillStyle='#2b2930'; x.fillRect(cx,y,cell-2,cell-2); x.fillStyle='#f4f2ee'; x.font='700 11px "Noto Sans KR",sans-serif';
         let t=a.al; while(x.measureText(t).width>cell-12&&t.length>2) t=t.slice(0,-2)+'…'; x.fillText(t,cx+6,y+cell-34);
         x.fillStyle='#9a97a3'; x.font='400 10px "Noto Sans KR",sans-serif'; let s=a.ar; while(x.measureText(s).width>cell-12&&s.length>2) s=s.slice(0,-2)+'…'; x.fillText(s,cx+6,y+cell-18) } });

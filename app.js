@@ -1,5 +1,7 @@
 (function(){
 'use strict';
+// 16:9 썸네일도 찌그러지지 않게 가운데를 정사각형으로 잘라 그려요
+const drawSq=(x,im,dx,dy,s)=>{ const w=im.naturalWidth||im.width, hh=im.naturalHeight||im.height, m=Math.min(w,hh); x.drawImage(im,(w-m)/2,(hh-m)/2,m,m,dx,dy,s,s) };
 const $=id=>document.getElementById(id);
 const C=window.Core;
 const state={all:null,months:6,n:5,showList:true,albums:[],run:0,mode:'auto',ytThumbs:false,withVideos:false,removed:new Set(),metaBase:''};
@@ -437,7 +439,7 @@ async function saveImage(){
   const imgs=await Promise.all(top.map(a=>a.cover?loadImg(a.cover):null));
   top.forEach((a,i)=>{const cx=pad+(i%n)*(cell+gap), cy=pad+headH+Math.floor(i/n)*(cell+gap);
     x.fillStyle='#26242c'; x.fillRect(cx,cy,cell,cell);
-    if(imgs[i]) x.drawImage(imgs[i],cx,cy,cell,cell);
+    if(imgs[i]) drawSq(x,imgs[i],cx,cy,cell);
     else{ x.fillStyle='#f4f2ee'; x.font='700 15px "Noto Sans KR",sans-serif'; wrap(x,a.album,cell-20).slice(0,4).forEach((l,j)=>x.fillText(l,cx+10,cy+cell-90+j*19));
       x.fillStyle='#9a97a3'; x.font='400 13px "Noto Sans KR",sans-serif'; x.fillText(wrap(x,a.artist,cell-20)[0]||'',cx+10,cy+cell-22) } });
   if(listW){ const lx=pad+gridW+36; let ly=pad+headH; const lh=Math.min(22,(gridW-(n-1)*8)/(n*n));
